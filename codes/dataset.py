@@ -4,9 +4,11 @@ from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 
 
+from functions import load_train_df
+
 class BengalDataset(Dataset):
 
-    def __init__(self, df, transform=None, test_dataset_flag=False):
+    def __init__(self, df, transform=None, test_dataset_flag=False,read_pickle=False, save_images=False):
         self.transform = transform
         self.df = df
 
@@ -18,23 +20,38 @@ class BengalDataset(Dataset):
         self.vowel_diacritic_label = []
         self.consonant_diacritic_label = []
         print("setting up dataset...")
-        for i in tqdm(range(len(df))):
+        if read_pickle:
+            self.images = pd.read_pickle("../data/images.dat")
+            self.grapheme_root_label = pd.read_pickle("../data/grapheme_root_label.dat")
+            self.vowel_diacritic_label = pd.read_pickle("../data/vowel_diacritic_label.dat")
+            self.consonant_diacritic_label = pd.read_pickle("../data/consonant_diacritic_label.dat")
 
-            if test_dataset_flag:
-                self.grapheme_root_label.append(0)
-                self.vowel_diacritic_label.append(0)
-                self.consonant_diacritic_label.append(0)
-                image = df.iloc[i].drop(['image_id', "row_id", "component"]).values.astype(np.uint8)
 
-            else:
+        else:
+            for i in tqdm(range(len(df))):
 
-                self.grapheme_root_label.append(int(df["grapheme_root"].iloc[i]))
-                self.vowel_diacritic_label.append(int(df["vowel_diacritic"].iloc[i]))
-                self.consonant_diacritic_label.append(int(df["consonant_diacritic"].iloc[i]))
+                if test_dataset_flag:
+                    self.grapheme_root_label.append(0)
+                    self.vowel_diacritic_label.append(0)
+                    self.consonant_diacritic_label.append(0)
+                    image = df.iloc[i].drop(['image_id', "row_id", "component"]).values.astype(np.uint8)
 
-                image = df.iloc[i].drop(['image_id', "grapheme_root", "vowel_diacritic","consonant_diacritic","grapheme"]).values.astype(np.uint8)
-            image = image.reshape(self.height, self.width, 1)
-            self.images.append(image)
+                else:
+
+                    self.grapheme_root_label.append(int(df["grapheme_root"].iloc[i]))
+                    self.vowel_diacritic_label.append(int(df["vowel_diacritic"].iloc[i]))
+                    self.consonant_diacritic_label.append(int(df["consonant_diacritic"].iloc[i]))
+
+                    image = df.iloc[i].drop(['image_id', "grapheme_root", "vowel_diacritic","consonant_diacritic","grapheme"]).values.astype(np.uint8)
+                image = image.reshape(self.height, self.width, 1)
+                self.images.append(image)
+
+            if save_images:
+                pd.to_pickle(self.images, "../data/images.dat")
+                pd.to_pickle(self.grapheme_root_label, "../data/grapheme_root_label.dat")
+                pd.to_pickle(self.vowel_diacritic_label, "../data/vowel_diacritic_label.dat")
+                pd.to_pickle(self.consonant_diacritic_label, "../data/consonant_diacritic_label.dat")
+
 
     def __len__(self):
         """Returns the number of data points."""
@@ -51,3 +68,9 @@ class BengalDataset(Dataset):
             image = self.transform(image)
 
         return (image,label1,label2,label3)
+
+
+if __name__ == "__main__":
+    # save all train images.
+    train_df = load_train_df()
+    _ = BengalDataset(df=train_df, transform=transforms, read_pickle=False, save_images=True)
