@@ -4,6 +4,8 @@ import os
 from tqdm import tqdm
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
+import sklearn.metrics
+
 import matplotlib.pyplot as plt
 
 data_folder = "../data"
@@ -16,7 +18,7 @@ def load_train_df():
     for i in tqdm(range(4)):
         train_parquet_files.append(pd.read_parquet(os.path.join(data_folder,'train_image_data_{}.parquet'.format(i))))
 
-    train_parquet_all = pd.concat(train_parquet_files, ignore_index=True)#[:1000]
+    train_parquet_all = pd.concat(train_parquet_files, ignore_index=True)
 
     train_all = train_parquet_all.merge(train_df, on="image_id")
 
@@ -37,6 +39,23 @@ def load_test_df():
 
     return test_all
 
+# evaluation metrics
+def calc_hierarchical_macro_recall(label1_true, label1_pred,
+                                   label2_true, label2_pred,
+                                   label3_true, label3_pred,
+                                   ):
+    # label1:vowel_disacritic
+    # label2:grapheme_root
+    # label3:consonant_diacritic
+    # these are defined in dataset.py
+
+    scores = []
+    scores.append(sklearn.metrics.recall_score(label1_true, label1_pred, average='macro'))
+    scores.append(sklearn.metrics.recall_score(label2_true, label2_pred, average='macro'))
+    scores.append(sklearn.metrics.recall_score(label3_true, label3_pred, average='macro'))
+
+    final_score = np.average(scores, weights=[1,2,1])
+    return final_score
 
 
 def plot_train_history(history, figure_name):

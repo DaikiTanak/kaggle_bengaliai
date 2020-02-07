@@ -14,14 +14,14 @@ from torchvision import transforms, utils
 
 from dataset import BengalDataset
 from model import se_resnet34, se_resnet152
-from functions import load_train_df, plot_train_history
+from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
 
 slack = slackweb.Slack(url="https://hooks.slack.com/services/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")
 
 
 data_folder = "../data"
 seed = 46
-epoch_num = 100
+epoch_num = 50
 batchsize = 128
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -75,7 +75,16 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         epoch_logger["train_loss"].append(loss.item())
 
+        epoch_logger["train_label1"].extend(labels1.cpu().numpy())
+        epoch_logger["train_label2"].extend(labels2.cpu().numpy())
+        epoch_logger["train_label3"].extend(labels3.cpu().numpy())
 
+        epoch_logger["train_label1_pred"].extend(out1.detach().cpu().numpy())
+        epoch_logger["train_label2_pred"].extend(out2.detach().cpu().numpy())
+        epoch_logger["train_label3_pred"].extend(out3.detach().cpu().numpy())
+
+
+    # Validation phase
     with torch.no_grad():
         model.eval()
 
@@ -90,14 +99,41 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
             epoch_logger["val_loss"].append(loss.item())
 
+            epoch_logger["val_label1"].extend(labels1.cpu().numpy())
+            epoch_logger["val_label2"].extend(labels2.cpu().numpy())
+            epoch_logger["val_label3"].extend(labels3.cpu().numpy())
+
+            epoch_logger["val_label1_pred"].extend(out1.cpu().numpy())
+            epoch_logger["val_label2_pred"].extend(out2.cpu().numpy())
+            epoch_logger["val_label3_pred"].extend(out3.cpu().numpy())
+
+    # calc macro-averaged recall on validation dataset
+    for k in ["train_label1_pred","train_label2_pred","train_label3_pred"]:
+        epoch_logger[k] = np.argmax(epoch_logger[k], axis=1)
+    for k in ["val_label1_pred","val_label2_pred","val_label3_pred"]:
+        epoch_logger[k] = np.argmax(epoch_logger[k], axis=1)
+
+    train_recall = calc_hierarchical_macro_recall(epoch_logger["train_label1"], epoch_logger["train_label1_pred"],
+                                                epoch_logger["train_label2"], epoch_logger["train_label2_pred"],
+                                                epoch_logger["train_label3"], epoch_logger["train_label3_pred"],)
+
+
+    val_recall = calc_hierarchical_macro_recall(epoch_logger["val_label1"], epoch_logger["val_label1_pred"],
+                                                epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
+                                                epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
 
     logger["train_loss"].append(np.mean(epoch_logger["train_loss"]))
     logger["val_loss"].append(np.mean(epoch_logger["val_loss"]))
 
+    logger["val_recall"].append(val_recall)
+    logger["train_recall"].append(train_recall)
 
-    slack.notify(text="Epoch:{} train loss:{} val loss:{}".format(epoch_idx,
-                                                                logger["train_loss"][-1],
-                                                                logger["val_loss"][-1]))
+
+    slack.notify(text="Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(epoch_idx,
+                                                                                                logger["train_loss"][-1],
+                                                                                                logger["val_loss"][-1],
+                                                                                                logger["train_recall"][-1],
+                                                                                                logger["val_recall"][-1]))
 
     for k, v in logger.items():
         print(k, v[-1])
@@ -114,5 +150,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
     if epoch_idx % 1 == 0:
         history = {"loss":{"train":logger["train_loss"],
-                           "validation":logger["val_loss"]}}
+                           "validation":logger["val_loss"]},
+                   "recall":{"train":logger["train_recall"],
+                            "val":logger["val_recall"]}}
         plot_train_history(history, "../result/train_history.png")
