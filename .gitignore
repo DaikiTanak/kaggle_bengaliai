@@ -1,0 +1,6 @@
+models/
+*.dat
+*.parquet
+*.csv
+/data/
+nohup.out
