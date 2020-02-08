@@ -15,17 +15,18 @@ import torchvision
 from dataset import BengalDfDataset, BengalImgDataset, load_pickle_images
 from model import se_resnet34, se_resnet152, densenet121
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
+from config import args
 
 slack = slackweb.Slack(url="https://hooks.slack.com/services/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")
 
 # configs
 data_folder = "../data"
-model_fn = "../models/resnet_baseline.dat"
-result_hist_fn = "../result/resnet_baseline_train_history.png"
-seed = 46
-epoch_num = 50
-batchsize = 100
-lr = 1e-4
+model_fn = "../models/{}.dat".format(args.name)
+result_hist_fn = "../result/{}_train_history.png".format(args.name)
+seed = args.seed
+epoch_num = args.epoch
+batchsize = args.batchsize
+lr = args.lr
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 print("Running device: ", device)
