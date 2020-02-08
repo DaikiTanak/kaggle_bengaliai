@@ -57,7 +57,6 @@ def calc_hierarchical_macro_recall(label1_true, label1_pred,
     final_score = np.average(scores, weights=[1,2,1])
     return final_score
 
-
 def plot_train_history(history, figure_name):
     # plot training log.
     # history : dictionary
