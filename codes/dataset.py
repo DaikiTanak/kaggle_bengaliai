@@ -10,7 +10,7 @@ from functions import load_train_df
 
 data_folder = "../data"
 
-class BengalDataset(Dataset):
+class BengalDfDataset(Dataset):
 
     def __init__(self, df, transform=None, test_dataset_flag=False):
         self.transform = transform
@@ -60,6 +60,47 @@ class BengalDataset(Dataset):
 
         return (image,label1,label2,label3)
 
+
+class BengalImgDataset(Dataset):
+    """
+    Construct dataset given images and labels.
+    """
+
+    def __init__(self, images, vowel, grapheme, consonant, transform=None, test_dataset_flag=False):
+        """
+        Params:
+            images: numpy.array
+
+        """
+
+
+        self.transform = transform
+        self.images = images
+        self.label1 = vowel
+        self.label2 = grapheme
+        self.label3 = consonant
+
+        self.height = 137
+        self.width = 236
+
+
+    def __len__(self):
+        """Returns the number of data points."""
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        """Returns an example or a sequence of examples."""
+        label1 = self.label1[idx]
+        label2 = self.label2[idx]
+        label3 = self.label3[idx]
+        image = self.images[idx]
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return (image,label1,label2,label3)
+
+
 def pickle_images():
     # pickle images, labels
     train_df = pd.read_csv(os.path.join(data_folder, 'train.csv'))
@@ -87,10 +128,27 @@ def pickle_images():
         fn = os.path.join(data_folder, "train_data_{}.pkl".format(parquet_idx))
         pd.to_pickle((images, vowel_diacritic_label, grapheme_root_label, consonant_diacritic_label), fn)
 
+def load_pickle_images():
+    # load pickled train images, labels
+    all_images = []
+    all_vowel = []
+    all_grapheme = []
+    all_consonant = []
+
+    for parquet_idx in range(4):
+        fn = os.path.join(data_folder, "train_data_{}.pkl".format(parquet_idx))
+        images, vowel_diacritic_label, grapheme_root_label, consonant_diacritic_label = pd.read_pickle(fn)
+        all_images.extend(images)
+        all_vowel.extend(vowel_diacritic_label)
+        all_grapheme.extend(grapheme_root_label)
+        all_consonant.extend(consonant_diacritic_label)
+
+    return (all_images, all_vowel, all_grapheme, all_consonant)
 
 if __name__ == "__main__":
     # save all train images.
     # train_df = load_train_df()
     # _ = BengalDataset(df=train_df, transform=transforms, read_pickle=False, save_images=True)
 
-    pickle_images()
+    # pickle_images()
+    load_pickle_images()
