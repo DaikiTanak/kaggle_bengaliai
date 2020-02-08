@@ -1,1 +1,1 @@
-python train.py --name densenet --model densenet
+python train.py --name  resnet_augment --model densenet
