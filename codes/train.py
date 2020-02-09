@@ -28,21 +28,38 @@ epoch_num = args.epoch
 batchsize = args.batchsize
 lr = args.lr
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
+height = 137
+width = 236
 
 print("Running device: ", device)
 
 # train_all = load_train_df()
-imgs, vowels, graphemes, consonants = load_pickle_images()
-print("#imgs: ", len(imgs))
+_, vowels, graphemes, consonants = load_pickle_images()
+imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
+# convert into 3-dim images
+imgs = np.tile(imgs, (1,1,1,3))
+print("#imgs: ", imgs.shape)
 
 # train_info, val_info = train_test_split(train_all, test_size=0.3, random_state=seed, shuffle=True)
 train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
-                                                                                                                                    test_size=0.3, random_state=seed, shuffle=True)
+                                                                                                                                    test_size=0.2,
+                                                                                                                                    random_state=seed,
+                                                                                                                                    shuffle=True)
+
 
 # ----------------------------------------------------------------------------------------------------
 # set up dataset, models, optimizer
+mean = 0.0818658566
+std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                            torchvision.transforms.ToTensor()])
+                                             torchvision.transforms.RandomRotation(degrees=10,),
+                                             torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+
+val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                             torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+
 
 # train_dataset = BengalDataset(df=train_info, transform=transforms)
 # val_dataset = BengalDataset(df=val_info, transform=transforms)
@@ -53,18 +70,21 @@ train_dataset = BengalImgDataset(images=train_imgs,
                                  transform=transforms)
 
 val_dataset = BengalImgDataset(images=val_imgs,
-                                 vowel=val_vowels,
-                                 grapheme=val_graphemes,
-                                 consonant=val_consonants,
-                                 transform=transforms)
+                                vowel=val_vowels,
+                                grapheme=val_graphemes,
+                                consonant=val_consonants,
+                                transform=val_transforms)
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuffle=False)
 
-model = se_resnet34(num_classes=2).to(device)
-# model = densenet121(if_selayer=True).to(device)
+# calc mean, var
+if args.model == "resnet":
+    model = se_resnet34(num_classes=2).to(device)
+elif args.model == "densenet":
+    model = densenet121(if_selayer=True).to(device)
 
-optimizer = optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
 # ----------------------------------------------------------------------------------------------------
@@ -79,6 +99,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
     model.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs.to(device)
+        inputs = inputs[:, 0, :, :].unsqueeze(1)
+
         labels1 = labels1.to(device)
         labels2 = labels2.to(device)
         labels3 = labels3.to(device)
@@ -107,6 +129,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
             inputs = inputs.to(device)
+            inputs = inputs[:, 0, :, :].unsqueeze(1)
+            
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
