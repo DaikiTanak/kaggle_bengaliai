@@ -11,7 +11,7 @@ def save_config(args, config_savepath):
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--gpu', default=0, type=int, required=False)
-parser.add_argument('--epoch', default=50, type=int, required=False)
+parser.add_argument('--epoch', default=30, type=int, required=False)
 parser.add_argument('--batchsize', default=100, type=int, required=False)
 parser.add_argument("--lr", default=1e-3, type=float, required=False)
 parser.add_argument('--seed', default=46, type=int, required=False)
