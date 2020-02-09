@@ -33,12 +33,27 @@ width = 236
 
 print("Running device: ", device)
 
+
+if args.model == "resnet":
+    model = se_resnet34(num_classes=2).to(device)
+elif args.model == "densenet":
+    model = densenet121(if_selayer=True).to(device)
+
+
 # train_all = load_train_df()
 _, vowels, graphemes, consonants = load_pickle_images()
 imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
 # convert into 3-dim images
 imgs = np.tile(imgs, (1,1,1,3))
+# imgs = imgs[:,:,:,0]
 print("#imgs: ", imgs.shape)
+
+# thresh = 20000
+# imgs = imgs[:thresh]
+# vowels = vowels[:thresh]
+# graphemes = graphemes[:thresh]
+# consonants = consonants[:thresh]
+
 
 # train_info, val_info = train_test_split(train_all, test_size=0.3, random_state=seed, shuffle=True)
 train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
@@ -52,14 +67,15 @@ train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, 
 mean = 0.0818658566
 std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                             torchvision.transforms.RandomRotation(degrees=10,),
+                                             torchvision.transforms.RandomRotation(degrees=5,),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                             # torchvision.transforms.Normalize(mean,std,)])
 
 val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-
+                                             # torchvision.transforms.Normalize(mean,std)])
 
 # train_dataset = BengalDataset(df=train_info, transform=transforms)
 # val_dataset = BengalDataset(df=val_info, transform=transforms)
@@ -78,13 +94,10 @@ val_dataset = BengalImgDataset(images=val_imgs,
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuffle=False)
 
-# calc mean, var
-if args.model == "resnet":
-    model = se_resnet34(num_classes=2).to(device)
-elif args.model == "densenet":
-    model = densenet121(if_selayer=True).to(device)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40], gamma=0.1)
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
 # ----------------------------------------------------------------------------------------------------
@@ -93,13 +106,15 @@ logger = defaultdict(list)
 val_best_loss = 1e+10
 
 for epoch_idx in range(1, epoch_num+1, 1):
+    scheduler.step()
 
     epoch_logger = defaultdict(list)
 
     model.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
-        inputs = inputs.to(device)
         inputs = inputs[:, 0, :, :].unsqueeze(1)
+
+        inputs = inputs.to(device)
 
         labels1 = labels1.to(device)
         labels2 = labels2.to(device)
@@ -128,9 +143,10 @@ for epoch_idx in range(1, epoch_num+1, 1):
         model.eval()
 
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
-            inputs = inputs.to(device)
+
             inputs = inputs[:, 0, :, :].unsqueeze(1)
-            
+            inputs = inputs.to(device)
+
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
