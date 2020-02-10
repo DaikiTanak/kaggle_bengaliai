@@ -34,8 +34,10 @@ width = 236
 print("Running device: ", device)
 
 
-if args.model == "resnet":
+if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
+    model = se_resnet34(num_classes=2).to(device)
+elif args.model == "resnet152":
     model = se_resnet152(num_classes=2).to(device)
 elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
@@ -99,7 +101,7 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=10, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
