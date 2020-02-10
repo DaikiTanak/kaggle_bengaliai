@@ -1,5 +1,6 @@
 import torch
-
+import numpy as np
+import Image
 
 class GaussianNoise:
 
@@ -15,4 +16,11 @@ class GaussianNoise:
         Returns:
             PIL Image:
         """
-        pass
+        img_arr = np.array(img)
+        img_arr.flags.writeable = True
+
+        img_arr += np.random.normal(mean, std, img_arr.shape)
+
+        added_pil = Image.fromarray(np.uint(img_arr))
+
+        return added_pil

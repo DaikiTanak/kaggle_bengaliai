@@ -98,7 +98,9 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
+#scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=10, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
 # ----------------------------------------------------------------------------------------------------
@@ -107,7 +109,7 @@ logger = defaultdict(list)
 val_best_loss = 1e+10
 
 for epoch_idx in range(1, epoch_num+1, 1):
-    scheduler.step()
+    # scheduler.step()
 
     epoch_logger = defaultdict(list)
 
@@ -185,6 +187,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
     logger["val_recall"].append(val_recall)
     logger["train_recall"].append(train_recall)
+
+    schedular.step(logger["val_loss"][-1])
 
 
     slack.notify(text="Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(epoch_idx,
