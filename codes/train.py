@@ -35,7 +35,8 @@ print("Running device: ", device)
 
 
 if args.model == "resnet":
-    model = se_resnet34(num_classes=2).to(device)
+    # model = se_resnet34(num_classes=2).to(device)
+    model = se_resnet152(num_classes=2).to(device)
 elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
 
