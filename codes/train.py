@@ -190,7 +190,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
     logger["val_recall"].append(val_recall)
     logger["train_recall"].append(train_recall)
 
-    schedular.step(logger["val_loss"][-1])
+    scheduler.step(logger["val_loss"][-1])
 
 
     slack.notify(text="Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(epoch_idx,
