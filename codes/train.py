@@ -51,7 +51,7 @@ lr = args.lr
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
-cutmix_prob = 0.2
+cutmix_prob = 0.1
 
 print("Running device: ", device)
 
@@ -116,7 +116,8 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=10, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+
 
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -141,7 +142,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         r = np.random.rand(1)
         if args.cutmix and r < cutmix_prob:
-            beta = 1.0
+            beta = .1
 
             lam = np.random.beta(beta, beta)
             rand_index = torch.randperm(inputs.size()[0]).to(device)
