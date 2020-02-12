@@ -16,7 +16,7 @@ class CutMixLoss(nn.Module):
         pass
 
 
-    def forward(self, batch_X, batch_y, beta=1):
+    def forward(self, batch_X, label1, label2, label3, beta=1):
         # generate mixed sample
         lam = np.random.beta(beta, beta)
         rand_index = torch.randperm(batch_X.size()[0]).to(self.device)
@@ -27,11 +27,11 @@ class CutMixLoss(nn.Module):
         # adjust lambda to exactly match pixel ratio
         lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (batch_X.size()[-1] * batch_X.size()[-2]))
         # compute output
-        output = model(batch_X)
+        out1, out2, out3 = model(batch_X)
+
         loss = criterion(output, target_a) * lam + criterion(output, target_b) * (1. - lam)
 
         return loss
-
 
 
 def test():
