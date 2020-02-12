@@ -33,6 +33,8 @@ class CutMixLoss(nn.Module):
 
         return loss
 
+    
+
 
 def test():
     batch_x = torch.rand(10,3,128,128)

@@ -17,7 +17,28 @@ from model import se_resnet34, se_resnet152, densenet121
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
 from config import args
 
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 slack = slackweb.Slack(url="https://hooks.slack.com/services/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")
+
+def rand_bbox(size, lam):
+    W = size[2]
+    H = size[3]
+    cut_rat = np.sqrt(1. - lam)
+    cut_w = np.int(W * cut_rat)
+    cut_h = np.int(H * cut_rat)
+
+    # uniform
+    cx = np.random.randint(W)
+    cy = np.random.randint(H)
+
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+    return bbx1, bby1, bbx2, bby2
 
 # configs
 data_folder = "../data"
@@ -30,6 +51,7 @@ lr = args.lr
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
+cutmix_prob = 0.2
 
 print("Running device: ", device)
 
@@ -50,13 +72,6 @@ imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
 imgs = np.tile(imgs, (1,1,1,3))
 # imgs = imgs[:,:,:,0]
 print("#imgs: ", imgs.shape)
-
-# thresh = 20000
-# imgs = imgs[:thresh]
-# vowels = vowels[:thresh]
-# graphemes = graphemes[:thresh]
-# consonants = consonants[:thresh]
-
 
 # train_info, val_info = train_test_split(train_all, test_size=0.3, random_state=seed, shuffle=True)
 train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
@@ -118,15 +133,38 @@ for epoch_idx in range(1, epoch_num+1, 1):
     model.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs[:, 0, :, :].unsqueeze(1)
-
         inputs = inputs.to(device)
 
         labels1 = labels1.to(device)
         labels2 = labels2.to(device)
         labels3 = labels3.to(device)
 
-        out1, out2, out3 = model(inputs)
-        loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+        r = np.random.rand(1)
+        if args.cutmix and r < cutmix_prob:
+            beta = 1.0
+
+            lam = np.random.beta(beta, beta)
+            rand_index = torch.randperm(inputs.size()[0]).to(device)
+            labels1_a = labels1
+            labels2_a = labels2
+            labels3_a = labels3
+
+            labels1_b = labels1[rand_index]
+            labels2_b = labels2[rand_index]
+            labels3_b = labels3[rand_index]
+
+            bbx1, bby1, bbx2, bby2 = rand_bbox(inputs.size(), lam)
+            inputs[:, :, bbx1:bbx2, bby1:bby2] = inputs[rand_index, :, bbx1:bbx2, bby1:bby2]
+            # adjust lambda to exactly match pixel ratio
+            lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
+            # compute output
+            out1, out2, out3 = model(inputs)
+            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+
+        else:
+            out1, out2, out3 = model(inputs)
+            loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+
 
         optimizer.zero_grad()
         loss.backward()
