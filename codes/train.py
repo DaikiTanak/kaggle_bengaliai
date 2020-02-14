@@ -87,7 +87,7 @@ mean = 0.0818658566
 std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                              # torchvision.transforms.RandomRotation(degrees=5,),
-                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.05, 0.05), scale=(0.9, 1.1), shear=None, resample=False, fillcolor=0),
+                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.05, 0.05), scale=(0.85, 1.15), shear=None, resample=False, fillcolor=0),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                              # torchvision.transforms.Normalize(mean,std,)])
