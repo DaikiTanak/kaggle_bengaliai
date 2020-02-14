@@ -52,6 +52,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
 cutmix_prob = 0.1
+mixup_prob = 0.1
 
 print("Running device: ", device)
 
@@ -85,7 +86,8 @@ train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, 
 mean = 0.0818658566
 std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                             torchvision.transforms.RandomRotation(degrees=5,),
+                                             # torchvision.transforms.RandomRotation(degrees=5,),
+                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.05, 0.05), scale=(0.9, 1.1), shear=None, resample=False, fillcolor=0),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                              # torchvision.transforms.Normalize(mean,std,)])
@@ -116,7 +118,7 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=10, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
 
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
@@ -159,6 +161,23 @@ for epoch_idx in range(1, epoch_num+1, 1):
             # adjust lambda to exactly match pixel ratio
             lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
             # compute output
+            out1, out2, out3 = model(inputs)
+            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+
+        elif args.mixup and r < mixup_prob:
+            lam = np.random.beta(args.mixup_alpha, args.mixup_alpha)
+            rand_index = torch.randperm(inputs.size()[0]).to(device)
+
+            inputs = lam * inputs + (1 - lam) * inputs[rand_index, :]
+
+            labels1_a = labels1
+            labels2_a = labels2
+            labels3_a = labels3
+
+            labels1_b = labels1[rand_index]
+            labels2_b = labels2[rand_index]
+            labels3_b = labels3[rand_index]
+
             out1, out2, out3 = model(inputs)
             loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
 
