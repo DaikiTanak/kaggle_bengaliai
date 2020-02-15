@@ -12,7 +12,7 @@ import torch
 import torchvision
 # from torchvision import transforms, utils
 
-from dataset import BengalDfDataset, BengalImgDataset, load_pickle_images
+from dataset import BengalImgDataset, load_pickle_images
 from model import se_resnet34, se_resnet152, densenet121
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
 from config import args
@@ -233,20 +233,27 @@ for epoch_idx in range(1, epoch_num+1, 1):
     for k in ["val_label1_pred","val_label2_pred","val_label3_pred"]:
         epoch_logger[k] = np.argmax(epoch_logger[k], axis=1)
 
-    train_recall = calc_hierarchical_macro_recall(epoch_logger["train_label1"], epoch_logger["train_label1_pred"],
-                                                epoch_logger["train_label2"], epoch_logger["train_label2_pred"],
-                                                epoch_logger["train_label3"], epoch_logger["train_label3_pred"],)
+    train_recall1, train_recall2, train_recall3, train_recall = calc_hierarchical_macro_recall(epoch_logger["train_label1"], epoch_logger["train_label1_pred"],
+                                                                                                epoch_logger["train_label2"], epoch_logger["train_label2_pred"],
+                                                                                                epoch_logger["train_label3"], epoch_logger["train_label3_pred"],)
 
 
-    val_recall = calc_hierarchical_macro_recall(epoch_logger["val_label1"], epoch_logger["val_label1_pred"],
-                                                epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
-                                                epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
+    val_recall1, val_recall2, val_recall3, val_recall = calc_hierarchical_macro_recall(epoch_logger["val_label1"], epoch_logger["val_label1_pred"],
+                                                                                        epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
+                                                                                        epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
 
     logger["train_loss"].append(np.mean(epoch_logger["train_loss"]))
     logger["val_loss"].append(np.mean(epoch_logger["val_loss"]))
 
     logger["val_recall"].append(val_recall)
     logger["train_recall"].append(train_recall)
+
+    logger["train_recall_label1"].append(train_recall1)
+    logger["train_recall_label2"].append(train_recall2)
+    logger["train_recall_label3"].append(train_recall3)
+    logger["val_recall_label1"].append(val_recall1)
+    logger["val_recall_label2"].append(val_recall2)
+    logger["val_recall_label3"].append(val_recall3)
 
     scheduler.step(logger["val_loss"][-1])
 
@@ -272,6 +279,14 @@ for epoch_idx in range(1, epoch_num+1, 1):
     if epoch_idx % 1 == 0:
         history = {"loss":{"train":logger["train_loss"],
                            "validation":logger["val_loss"]},
-                   "recall":{"train":logger["train_recall"],
-                            "val":logger["val_recall"]}}
+                   "recall":{"train_all":logger["train_recall"],
+                            "val_all":logger["val_recall"],
+                            "train_label1":logger["train_recall_label1"],
+                            "train_label2":logger["train_recall_label2"],
+                            "train_label3":logger["train_recall_label3"],
+                            "val_label1":logger["val_recall_label1"],
+                            "val_label2":logger["val_recall_label2"],
+                            "val_label3":logger["val_recall_label3"],
+                            },
+                   }
         plot_train_history(history, result_hist_fn)

@@ -567,6 +567,7 @@ class DenseNet(nn.Module):
         # Linear layer
         # self.classifier = nn.Linear(num_features, num_classes)
 
+        # vowel
         self.fc1 = nn.Sequential()
         self.fc1.add_module("fc1", nn.Linear(num_features, num_features))
         self.fc1.add_module("relu1", nn.ReLU(True))

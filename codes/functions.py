@@ -50,12 +50,17 @@ def calc_hierarchical_macro_recall(label1_true, label1_pred,
     # these are defined in dataset.py
 
     scores = []
-    scores.append(sklearn.metrics.recall_score(label1_true, label1_pred, average='macro'))
-    scores.append(sklearn.metrics.recall_score(label2_true, label2_pred, average='macro'))
-    scores.append(sklearn.metrics.recall_score(label3_true, label3_pred, average='macro'))
+
+    vowel_recall = sklearn.metrics.recall_score(label1_true, label1_pred, average='macro')
+    grapheme_recall = sklearn.metrics.recall_score(label2_true, label2_pred, average='macro')
+    consonant_recall = sklearn.metrics.recall_score(label3_true, label3_pred, average='macro')
+
+    scores.append(vowel_recall)
+    scores.append(grapheme_recall)
+    scores.append(consonant_recall)
 
     final_score = np.average(scores, weights=[1,2,1])
-    return final_score
+    return vowel_recall, grapheme_recall, consonant_recall, final_score
 
 def plot_train_history(history, figure_name):
     # plot training log.
