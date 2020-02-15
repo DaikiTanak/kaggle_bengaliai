@@ -120,7 +120,6 @@ optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=Tr
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
-
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
 # ----------------------------------------------------------------------------------------------------
@@ -255,6 +254,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
     logger["val_recall_label2"].append(val_recall2)
     logger["val_recall_label3"].append(val_recall3)
 
+    last_lr = scheduler.get_last_lr()
+    logger["last_lr"].append(last_lr)
+
     scheduler.step(logger["val_loss"][-1])
 
 
@@ -288,5 +290,6 @@ for epoch_idx in range(1, epoch_num+1, 1):
                             "val_label2":logger["val_recall_label2"],
                             "val_label3":logger["val_recall_label3"],
                             },
+                   "lr":{"last_lr":logger["last_lr"]}
                    }
         plot_train_history(history, result_hist_fn)
