@@ -56,14 +56,31 @@ mixup_prob = 0.1
 
 print("Running device: ", device)
 
+if not args.multi_models:
+    if args.model == "resnet34":
+        # model = se_resnet34(num_classes=2).to(device)
+        model = se_resnet34(num_classes=2).to(device)
+    elif args.model == "resnet152":
+        model = se_resnet152(num_classes=2).to(device)
+    elif args.model == "densenet":
+        model = densenet121(if_selayer=True).to(device)
 
-if args.model == "resnet34":
-    # model = se_resnet34(num_classes=2).to(device)
-    model = se_resnet34(num_classes=2).to(device)
-elif args.model == "resnet152":
-    model = se_resnet152(num_classes=2).to(device)
-elif args.model == "densenet":
-    model = densenet121(if_selayer=True).to(device)
+elif args.multi_mmodels:
+    # train models for each label
+    if args.model == "resnet34":
+        # model = se_resnet34(num_classes=2).to(device)
+        model1 = se_resnet34(num_classes=2).to(device)
+        model2 = se_resnet34(num_classes=2).to(device)
+        model3 = se_resnet34(num_classes=2).to(device)
+    elif args.model == "resnet152":
+        model1 = se_resnet152(num_classes=2).to(device)
+        model2 = se_resnet152(num_classes=2).to(device)
+        model3 = se_resnet152(num_classes=2).to(device)
+    elif args.model == "densenet":
+        model = densenet121(if_selayer=True).to(device)
+        mode2 = densenet121(if_selayer=True).to(device)
+        mode3 = densenet121(if_selayer=True).to(device)
+
 
 
 # train_all = load_train_df()
@@ -87,7 +104,7 @@ mean = 0.0818658566
 std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                              # torchvision.transforms.RandomRotation(degrees=5,),
-                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.05, 0.05), scale=(0.85, 1.15), shear=None, resample=False, fillcolor=0),
+                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.02, 0.02), scale=(0.85, 1.15), shear=None, resample=False, fillcolor=0),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                              # torchvision.transforms.Normalize(mean,std,)])
@@ -254,8 +271,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
     logger["val_recall_label2"].append(val_recall2)
     logger["val_recall_label3"].append(val_recall3)
 
-    last_lr = scheduler.get_last_lr()
-    logger["last_lr"].append(last_lr)
+    # last_lr = scheduler.get_last_lr()
+    # logger["last_lr"].append(last_lr)
 
     scheduler.step(logger["val_loss"][-1])
 
@@ -290,6 +307,6 @@ for epoch_idx in range(1, epoch_num+1, 1):
                             "val_label2":logger["val_recall_label2"],
                             "val_label3":logger["val_recall_label3"],
                             },
-                   "lr":{"last_lr":logger["last_lr"]}
+                   # "lr":{"last_lr":logger["last_lr"]}
                    }
         plot_train_history(history, result_hist_fn)
