@@ -56,14 +56,20 @@ mixup_prob = 0.1
 
 print("Running device: ", device)
 
+# train models for each label
 if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
-    model = se_resnet34(num_classes=2, multi_output=True).to(device)
+    model1 = se_resnet34(num_classes=11, multi_output=False).to(device)
+    model2 = se_resnet34(num_classes=168, multi_output=False).to(device)
+    model3 = se_resnet34(num_classes=7, multi_output=False).to(device)
 elif args.model == "resnet152":
-    model = se_resnet152(num_classes=2, multi_output=True).to(device)
+    model1 = se_resnet152(num_classes=11, multi_output=False).to(device)
+    model2 = se_resnet152(num_classes=168, multi_output=False).to(device)
+    model3 = se_resnet152(num_classes=7, multi_output=False).to(device)
 elif args.model == "densenet":
-    model = densenet121(if_selayer=True, multi_output=True).to(device)
-
+    model = densenet121(if_selayer=True).to(device)
+    mode2 = densenet121(if_selayer=True).to(device)
+    mode3 = densenet121(if_selayer=True).to(device)
 
 
 
@@ -117,9 +123,13 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 
 
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
+optimizer1 = torch.optim.SGD(model1.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
+optimizer2 = torch.optim.SGD(model2.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
+optimizer3 = torch.optim.SGD(model3.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler1 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer1, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler2 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer2, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler3 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer3, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -161,8 +171,13 @@ for epoch_idx in range(1, epoch_num+1, 1):
             # adjust lambda to exactly match pixel ratio
             lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
             # compute output
-            out1, out2, out3 = model(inputs)
-            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            out1 = model1(inputs)
+            out2 = model2(inputs)
+            out3 = model3(inputs)
+
+            loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
+            loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
+            loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
 
         elif args.mixup and r < mixup_prob:
             lam = np.random.beta(args.mixup_alpha, args.mixup_alpha)
@@ -178,17 +193,38 @@ for epoch_idx in range(1, epoch_num+1, 1):
             labels2_b = labels2[rand_index]
             labels3_b = labels3[rand_index]
 
-            out1, out2, out3 = model(inputs)
-            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            # compute output
+            out1 = model1(inputs)
+            out2 = model2(inputs)
+            out3 = model3(inputs)
+
+            loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
+            loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
+            loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
+
 
         else:
-            out1, out2, out3 = model(inputs)
-            loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            # compute output
+            out1 = model1(inputs)
+            out2 = model2(inputs)
+            out3 = model3(inputs)
+
+            loss1 = loss_fn(out1, labels1)
+            loss2 = loss_fn(out2, labels2)
+            loss3 = loss_fn(out3, labels3)
 
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        optimizer1.zero_grad()
+        loss1.backward()
+        optimizer1.step()
+
+        optimizer2.zero_grad()
+        loss2.backward()
+        optimizer2.step()
+
+        optimizer3.zero_grad()
+        loss3.backward()
+        optimizer3.step()
 
         epoch_logger["train_loss"].append(loss.item())
 
