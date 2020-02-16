@@ -64,9 +64,6 @@ elif args.model == "resnet152":
 elif args.model == "densenet":
     model = densenet121(if_selayer=True, multi_output=True).to(device)
 
-
-
-
 # train_all = load_train_df()
 _, vowels, graphemes, consonants = load_pickle_images()
 imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
@@ -145,7 +142,6 @@ for epoch_idx in range(1, epoch_num+1, 1):
         r = np.random.rand(1)
         if args.cutmix and r < cutmix_prob:
             #beta = .1
-           
 
             lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
             rand_index = torch.randperm(inputs.size()[0]).to(device)
@@ -163,7 +159,11 @@ for epoch_idx in range(1, epoch_num+1, 1):
             lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
             # compute output
             out1, out2, out3 = model(inputs)
-            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
+            loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
+            loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
+
 
         elif args.mixup and r < mixup_prob:
             lam = np.random.beta(args.mixup_alpha, args.mixup_alpha)
@@ -180,18 +180,26 @@ for epoch_idx in range(1, epoch_num+1, 1):
             labels3_b = labels3[rand_index]
 
             out1, out2, out3 = model(inputs)
-            loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
+            loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
+            loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
 
         else:
             out1, out2, out3 = model(inputs)
-            loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            loss1 = loss_fn(out1, labels1)
+            loss2 = loss_fn(out2, labels2)
+            loss3 = loss_fn(out3, labels3)
 
+        loss = loss1 + loss2 + loss3
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        epoch_logger["train_loss"].append(loss.item())
+        train_losses = [loss1.item(),loss2.item(),loss3.item()]
+        epoch_logger["train_loss"].append(np.average(train_losses, weights=[1,2,1]))
 
         epoch_logger["train_label1"].extend(labels1.cpu().numpy())
         epoch_logger["train_label2"].extend(labels2.cpu().numpy())
@@ -216,9 +224,15 @@ for epoch_idx in range(1, epoch_num+1, 1):
             labels3 = labels3.to(device)
 
             out1, out2, out3 = model(inputs)
-            loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            loss1 = loss_fn(out1, labels1)
+            loss2 = loss_fn(out2, labels2)
+            loss3 = loss_fn(out3, labels3)
 
-            epoch_logger["val_loss"].append(loss.item())
+            val_losses = [loss1.item(),loss2.item(),loss3.item()]
+
+            # weighted loss
+            epoch_logger["val_loss"].append(np.average(val_losses, weights=[1,2,1]))
 
             epoch_logger["val_label1"].extend(labels1.cpu().numpy())
             epoch_logger["val_label2"].extend(labels2.cpu().numpy())
