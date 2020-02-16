@@ -226,7 +226,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
         loss3.backward()
         optimizer3.step()
 
-        epoch_logger["train_loss"].append(loss.item())
+        epoch_logger["train_loss1"].append(loss1.item())
+        epoch_logger["train_loss2"].append(loss2.item())
+        epoch_logger["train_loss3"].append(loss3.item())
 
         epoch_logger["train_label1"].extend(labels1.cpu().numpy())
         epoch_logger["train_label2"].extend(labels2.cpu().numpy())
@@ -250,10 +252,18 @@ for epoch_idx in range(1, epoch_num+1, 1):
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
 
-            out1, out2, out3 = model(inputs)
-            loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
+            # compute output
+            out1 = model1(inputs)
+            out2 = model2(inputs)
+            out3 = model3(inputs)
 
-            epoch_logger["val_loss"].append(loss.item())
+            loss1 = loss_fn(out1, labels1)
+            loss2 = loss_fn(out2, labels1)
+            loss3 = loss_fn(out3, labels1)
+
+            epoch_logger["val_loss1"].append(loss1.item())
+            epoch_logger["val_loss2"].append(loss2.item())
+            epoch_logger["val_loss3"].append(loss3.item())
 
             epoch_logger["val_label1"].extend(labels1.cpu().numpy())
             epoch_logger["val_label2"].extend(labels2.cpu().numpy())
@@ -316,8 +326,12 @@ for epoch_idx in range(1, epoch_num+1, 1):
         torch.save(checkpoint, model_fn)
 
     if epoch_idx % 1 == 0:
-        history = {"loss":{"train":logger["train_loss"],
-                           "validation":logger["val_loss"]},
+        history = {"loss1":{"train":logger["train_loss1"],
+                           "validation":logger["val_loss1"]},
+                   "loss2":{"train":logger["train_loss2"],
+                                      "validation":logger["val_loss2"]},
+                   "loss3":{"train":logger["train_loss3"],
+                                      "validation":logger["val_loss3"]},
                    "recall":{"train_all":logger["train_recall"],
                             "val_all":logger["val_recall"],
                             "train_label1":logger["train_recall_label1"],
