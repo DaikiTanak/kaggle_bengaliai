@@ -148,6 +148,9 @@ val_best_loss3 = 1e+10
 for epoch_idx in range(1, epoch_num+1, 1):
     # scheduler.step()
 
+    if epoch_idx > 3:
+        break
+
     epoch_logger = defaultdict(list)
 
     model1.train()
