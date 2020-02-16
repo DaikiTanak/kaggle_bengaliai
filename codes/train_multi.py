@@ -43,7 +43,7 @@ def rand_bbox(size, lam):
 # configs
 data_folder = "../data"
 
-model1_fn = "../models/{}_label{}.dat".format(args.name)
+model1_fn = "../models/{}_label1.dat".format(args.name)
 model2_fn = "../models/{}_label2.dat".format(args.name)
 model3_fn = "../models/{}_label3.dat".format(args.name)
 
@@ -156,7 +156,6 @@ for epoch_idx in range(1, epoch_num+1, 1):
     model3.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs[:, 0, :, :].unsqueeze(1)
-
 
         labels1 = labels1.to(device)
         labels2 = labels2.to(device)
@@ -282,8 +281,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
             out3 = model3(inputs_)
 
             loss1 = loss_fn(out1, labels1)
-            loss2 = loss_fn(out2, labels1)
-            loss3 = loss_fn(out3, labels1)
+            loss2 = loss_fn(out2, labels2)
+            loss3 = loss_fn(out3, labels3)
 
             epoch_logger["val_loss1"].append(loss1.item())
             epoch_logger["val_loss2"].append(loss2.item())

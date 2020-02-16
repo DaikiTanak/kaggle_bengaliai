@@ -10,3 +10,4 @@ python train_multi.py --name multi_resnet34_mixup_alpha.3 --epoch 100 --mixup --
 # python train.py --name resnet34_cutmix_alpha.1 --epoch 100 --cutmix --cutmix_alpha 0.1 --batchsize 256
 python train.py --name resnet34_cutmix_alpha.3 --epoch 100 --cutmix --cutmix_alpha 0.3 --batchsize 256
 python train.py --name densenet_mixup_alpha.3 --epoch 100 --mixup --mixup_alpha 0.3 --model densenet
+python train.py --name densenet_base --epoch 80 --model densenet
