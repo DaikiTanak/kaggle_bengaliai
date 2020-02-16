@@ -307,10 +307,10 @@ for epoch_idx in range(1, epoch_num+1, 1):
     logger["val_recall_label3"].append(val_recall3)
 
     # weighted loss
-    train_losses = [logger["train_loss1"],logger["train_loss2"],logger["train_loss3"]]
-    val_losses = [logger["val_loss1"],logger["val_loss2"],logger["val_loss3"]]
-    logger["train_loss"] = np.average(train_losses, weights=[1,2,1])
-    logger["val_loss"] = np.average(val_losses, weights=[1,2,1])
+    train_losses = [logger["train_loss1"][-1],logger["train_loss2"][-1],logger["train_loss3"][-1]]
+    val_losses = [logger["val_loss1"][-1],logger["val_loss2"][-1],logger["val_loss3"][-1]]
+    logger["train_loss"].append(np.average(train_losses, weights=[1,2,1]))
+    logger["val_loss"].append(np.average(val_losses, weights=[1,2,1]))
 
     scheduler.step(logger["val_loss"][-1])
 

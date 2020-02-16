@@ -198,8 +198,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
         loss.backward()
         optimizer.step()
 
-        train_losses = [loss1.item(),loss2.item(),loss3.item()]
-        epoch_logger["train_loss"].append(np.average(train_losses, weights=[1,2,1]))
+        epoch_logger["train_loss1"].append(loss1.item())
+        epoch_logger["train_loss2"].append(loss2.item())
+        epoch_logger["train_loss3"].append(loss3.item())
 
         epoch_logger["train_label1"].extend(labels1.cpu().numpy())
         epoch_logger["train_label2"].extend(labels2.cpu().numpy())
@@ -229,10 +230,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
             loss2 = loss_fn(out2, labels2)
             loss3 = loss_fn(out3, labels3)
 
-            val_losses = [loss1.item(),loss2.item(),loss3.item()]
-
-            # weighted loss
-            epoch_logger["val_loss"].append(np.average(val_losses, weights=[1,2,1]))
+            epoch_logger["val_loss1"].append(loss1.item())
+            epoch_logger["val_loss2"].append(loss2.item())
+            epoch_logger["val_loss3"].append(loss3.item())
 
             epoch_logger["val_label1"].extend(labels1.cpu().numpy())
             epoch_logger["val_label2"].extend(labels2.cpu().numpy())
@@ -257,8 +257,16 @@ for epoch_idx in range(1, epoch_num+1, 1):
                                                                                         epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
                                                                                         epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
 
-    logger["train_loss"].append(np.mean(epoch_logger["train_loss"]))
-    logger["val_loss"].append(np.mean(epoch_logger["val_loss"]))
+
+    for loss_idx in range(1,4,1):
+        logger["train_loss{}".format(loss_idx)].append(np.mean(epoch_logger["train_loss{}".format(loss_idx)]))
+        logger["val_loss{}".format(loss_idx)].append(np.mean(epoch_logger["val_loss{}".format(loss_idx)]))
+
+    # weighted loss
+    train_losses = [logger["train_loss1"][-1],logger["train_loss2"][-1],logger["train_loss3"][-1]]
+    val_losses = [logger["val_loss1"][-1],logger["val_loss2"][-1],logger["val_loss3"][-1]]
+    logger["train_loss"].append(np.average(train_losses, weights=[1,2,1]))
+    logger["val_loss"].append(np.average(val_losses, weights=[1,2,1]))
 
     logger["val_recall"].append(val_recall)
     logger["train_recall"].append(train_recall)
