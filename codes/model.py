@@ -195,14 +195,15 @@ class ResNet(nn.Module):
     # This ResNet does Manifold-Mixup.
     # https://arxiv.org/pdf/1806.05236.pdf
     def __init__(self, block, layers, num_classes=2, zero_init_residual=True, mixup_hidden=True, shake_shake=False,
-                 first_conv_stride=2, first_pool=True, device="cuda:0", in_channels=1):
+                 first_conv_stride=2, first_pool=True, device="cuda:0", in_channels=1, multi_output=True):
         super(ResNet, self).__init__()
         self.mixup_hidden = mixup_hidden
         self.shake_shake = shake_shake
         self.inplanes = 64
         self.num_classes = num_classes
         self.first_pool = first_pool
-        self.device=device
+        self.device = device
+        self.multi_output = multi_output
 
         # for wide-resnet
         widen_factor = 1
@@ -222,22 +223,25 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512*widen_factor, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # self.fc = nn.Linear(512 * block.expansion * widen_factor, num_classes)
 
-        self.fc1 = nn.Sequential()
-        self.fc1.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-        self.fc1.add_module("relu1", nn.ReLU(True))
-        self.fc1.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 11))
-        # grapheme_root
-        self.fc2 = nn.Sequential()
-        self.fc2.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-        self.fc2.add_module("relu1", nn.ReLU(True))
-        self.fc2.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 168))
-        # consonant_diacritic
-        self.fc3 = nn.Sequential()
-        self.fc3.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-        self.fc3.add_module("relu1", nn.ReLU(True))
-        self.fc3.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 7))
+        if not multi_output:
+            self.fc = nn.Linear(512 * block.expansion * widen_factor, num_classes)
+        elif multi_output:
+
+            self.fc1 = nn.Sequential()
+            self.fc1.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
+            self.fc1.add_module("relu1", nn.ReLU(True))
+            self.fc1.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 11))
+            # grapheme_root
+            self.fc2 = nn.Sequential()
+            self.fc2.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
+            self.fc2.add_module("relu1", nn.ReLU(True))
+            self.fc2.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 168))
+            # consonant_diacritic
+            self.fc3 = nn.Sequential()
+            self.fc3.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
+            self.fc3.add_module("relu1", nn.ReLU(True))
+            self.fc3.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 7))
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -333,67 +337,76 @@ class ResNet(nn.Module):
         out = self.avgpool(out)
         out = out.view(out.size(0), -1)
 
-        # out = self.fc(out)
-        out1 = self.fc1(out)
-        out2 = self.fc2(out)
-        out3 = self.fc3(out)
+        if self.multi_output:
+            out1 = self.fc1(out)
+            out2 = self.fc2(out)
+            out3 = self.fc3(out)
 
-        if lam is None:
-            return out1, out2, out3
-        else:
-            return out1, out2, out3, target_reweighted
+            if lam is None:
+                return out1, out2, out3
+            else:
+                return out1, out2, out3, target_reweighted
+
+        elif not self.multi_output
+            out = self.fc(out)
+            if lam is None:
+                return out
+            else:
+                return out, target_reweighted
 
 
-def se_resnet18(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True):
+
+
+def se_resnet18(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(SEBasicBlock, [2, 2, 2, 2], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake,
-                   first_conv_stride=first_conv_stride, first_pool=first_pool)
+                   first_conv_stride=first_conv_stride, first_pool=first_pool, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
 
-def se_resnet34(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True):
+def se_resnet34(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-34 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(SEBasicBlock, [3, 4, 6, 3], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake,
-                   first_conv_stride=first_conv_stride, first_pool=first_pool)
+                   first_conv_stride=first_conv_stride, first_pool=first_pool, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
 
-def se_resnet50(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True):
+def se_resnet50(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(SEBottleneck, [3, 4, 6, 3], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake,
-                   first_conv_stride=first_conv_stride, first_pool=first_pool)
+                   first_conv_stride=first_conv_stride, first_pool=first_pool, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
 
-def se_resnet101(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True):
+def se_resnet101(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(SEBottleneck, [3, 4, 23, 3],num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake,
-                   first_conv_stride=first_conv_stride, first_pool=first_pool)
+                   first_conv_stride=first_conv_stride, first_pool=first_pool, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
 
-def se_resnet152(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True):
+def se_resnet152(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-152 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(SEBottleneck, [3, 8, 36, 3], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake)
+    model = ResNet(SEBottleneck, [3, 8, 36, 3], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
