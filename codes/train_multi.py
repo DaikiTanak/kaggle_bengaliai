@@ -42,7 +42,8 @@ def rand_bbox(size, lam):
 
 # configs
 data_folder = "../data"
-model1_fn = "../models/{}_label1.dat".format(args.name)
+
+model1_fn = "../models/{}_label{}.dat".format(args.name)
 model2_fn = "../models/{}_label2.dat".format(args.name)
 model3_fn = "../models/{}_label3.dat".format(args.name)
 
@@ -148,9 +149,6 @@ val_best_loss3 = 1e+10
 for epoch_idx in range(1, epoch_num+1, 1):
     # scheduler.step()
 
-    if epoch_idx > 3:
-        break
-
     epoch_logger = defaultdict(list)
 
     model1.train()
@@ -158,7 +156,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
     model3.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs[:, 0, :, :].unsqueeze(1)
-        inputs = inputs.to(device)
+
 
         labels1 = labels1.to(device)
         labels2 = labels2.to(device)
@@ -183,9 +181,13 @@ for epoch_idx in range(1, epoch_num+1, 1):
             # adjust lambda to exactly match pixel ratio
             lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
             # compute output
-            out1 = model1(inputs)
-            out2 = model2(inputs)
-            out3 = model3(inputs)
+            inputs_ = inputs.to(device)
+            out1 = model1(inputs_)
+            inputs_ = inputs.to(device)
+            out2 = model2(inputs_)
+            inputs_ = inputs.to(device)
+            out3 = model3(inputs_)
+
 
             loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
             loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
@@ -206,9 +208,12 @@ for epoch_idx in range(1, epoch_num+1, 1):
             labels3_b = labels3[rand_index]
 
             # compute output
-            out1 = model1(inputs)
-            out2 = model2(inputs)
-            out3 = model3(inputs)
+            inputs_ = inputs.to(device)
+            out1 = model1(inputs_)
+            inputs_ = inputs.to(device)
+            out2 = model2(inputs_)
+            inputs_ = inputs.to(device)
+            out3 = model3(inputs_)
 
             loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
             loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
@@ -217,9 +222,12 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         else:
             # compute output
-            out1 = model1(inputs)
-            out2 = model2(inputs)
-            out3 = model3(inputs)
+            inputs_ = inputs.to(device)
+            out1 = model1(inputs_)
+            inputs_ = inputs.to(device)
+            out2 = model2(inputs_)
+            inputs_ = inputs.to(device)
+            out3 = model3(inputs_)
 
             loss1 = loss_fn(out1, labels1)
             loss2 = loss_fn(out2, labels2)
@@ -260,16 +268,18 @@ for epoch_idx in range(1, epoch_num+1, 1):
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
 
             inputs = inputs[:, 0, :, :].unsqueeze(1)
-            inputs = inputs.to(device)
 
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
 
             # compute output
-            out1 = model1(inputs)
-            out2 = model2(inputs)
-            out3 = model3(inputs)
+            inputs_ = inputs.to(device)
+            out1 = model1(inputs_)
+            inputs_ = inputs.to(device)
+            out2 = model2(inputs_)
+            inputs_ = inputs.to(device)
+            out3 = model3(inputs_)
 
             loss1 = loss_fn(out1, labels1)
             loss2 = loss_fn(out2, labels1)
