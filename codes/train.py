@@ -63,6 +63,8 @@ elif args.model == "resnet152":
     model = se_resnet152(num_classes=2, multi_output=True).to(device)
 elif args.model == "densenet":
     model = densenet121(if_selayer=True, multi_output=True).to(device)
+else:
+    raise ValueError()
 
 # train_all = load_train_df()
 _, vowels, graphemes, consonants = load_pickle_images()

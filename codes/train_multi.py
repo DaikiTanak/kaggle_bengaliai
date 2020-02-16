@@ -42,7 +42,10 @@ def rand_bbox(size, lam):
 
 # configs
 data_folder = "../data"
-model_fn = "../models/{}.dat".format(args.name)
+model1_fn = "../models/{}_label1.dat".format(args.name)
+model2_fn = "../models/{}_label2.dat".format(args.name)
+model3_fn = "../models/{}_label3.dat".format(args.name)
+
 result_hist_fn = "../result/{}_train_history.png".format(args.name)
 seed = args.seed
 epoch_num = args.epoch
@@ -136,7 +139,9 @@ loss_fn = torch.nn.CrossEntropyLoss()
 # ----------------------------------------------------------------------------------------------------
 
 logger = defaultdict(list)
-val_best_loss = 1e+10
+val_best_loss1 = 1e+10
+val_best_loss2 = 1e+10
+val_best_loss3 = 1e+10
 
 for epoch_idx in range(1, epoch_num+1, 1):
     # scheduler.step()
@@ -312,8 +317,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
     logger["train_loss"].append(np.average(train_losses, weights=[1,2,1]))
     logger["val_loss"].append(np.average(val_losses, weights=[1,2,1]))
 
-    scheduler.step(logger["val_loss"][-1])
-
+    scheduler1.step(logger["val_loss1"][-1])
+    scheduler2.step(logger["val_loss2"][-1])
+    scheduler3.step(logger["val_loss3"][-1])
 
     slack.notify(text="Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(epoch_idx,
                                                                                                 round(logger["train_loss"][-1], 3),
@@ -324,14 +330,34 @@ for epoch_idx in range(1, epoch_num+1, 1):
     for k, v in logger.items():
         print(k, v[-1])
 
-    if logger["val_loss"][-1] < val_best_loss:
-        val_best_loss = logger["val_loss"][-1]
+    if logger["val_loss1"][-1] < val_best_loss1:
+        val_best_loss1 = logger["val_loss1"][-1]
 
-        checkpoint = {"model":model.state_dict(),
-                      "oprimizer":optimizer.state_dict(),
+        checkpoint = {"model":model1.state_dict(),
+                      "oprimizer":optimizer1.state_dict(),
                       "cpoch":epoch_idx,
-                      "val_best_loss":val_best_loss}
-        torch.save(checkpoint, model_fn)
+                      "val_best_loss":val_best_loss1}
+        torch.save(checkpoint, model1_fn)
+
+    if logger["val_loss2"][-1] < val_best_loss2:
+        val_best_loss2 = logger["val_loss2"][-1]
+
+        checkpoint = {"model":model2.state_dict(),
+                      "oprimizer":optimizer2.state_dict(),
+                      "cpoch":epoch_idx,
+                      "val_best_loss":val_best_loss2}
+        torch.save(checkpoint, model2_fn)
+
+    if logger["val_loss3"][-1] < val_best_loss3:
+        val_best_loss3 = logger["val_loss3"][-1]
+
+        checkpoint = {"model":model3.state_dict(),
+                      "oprimizer":optimizer3.state_dict(),
+                      "cpoch":epoch_idx,
+                      "val_best_loss":val_best_loss3}
+        torch.save(checkpoint, model3_fn)
+
+
 
     if epoch_idx % 1 == 0:
         history = {"loss1":{"train":logger["train_loss1"],
