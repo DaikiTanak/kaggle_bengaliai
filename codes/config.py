@@ -20,5 +20,6 @@ parser.add_argument("--name", default="test", type=str, required=False)
 parser.add_argument('--cutmix', action='store_true', default=False, required=False, help="cut-mix regularization")
 parser.add_argument('--mixup', action='store_true', default=False, required=False, help="mix-up regularization")
 parser.add_argument("--mixup_alpha", default=0.1, type=float, required=False)
+parser.add_argument("--cutmix_alpha", default=0.1, type=float, required=False)
 
 args = parser.parse_args()

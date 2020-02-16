@@ -144,9 +144,10 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         r = np.random.rand(1)
         if args.cutmix and r < cutmix_prob:
-            beta = .1
+            #beta = .1
+           
 
-            lam = np.random.beta(beta, beta)
+            lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
             rand_index = torch.randperm(inputs.size()[0]).to(device)
             labels1_a = labels1
             labels2_a = labels2

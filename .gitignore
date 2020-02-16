@@ -4,3 +4,4 @@ models/
 *.csv
 /data/
 nohup.out
+*.pkl

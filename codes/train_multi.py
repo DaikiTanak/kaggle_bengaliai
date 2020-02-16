@@ -143,7 +143,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
     epoch_logger = defaultdict(list)
 
-    model.train()
+    model1.train()
+    model2.train()
+    model3.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs[:, 0, :, :].unsqueeze(1)
         inputs = inputs.to(device)
@@ -241,7 +243,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
     # Validation phase
     with torch.no_grad():
-        model.eval()
+        model1.eval()
+        model2.eval()
+        model3.eval()
 
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
 
