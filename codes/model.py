@@ -347,7 +347,7 @@ class ResNet(nn.Module):
             else:
                 return out1, out2, out3, target_reweighted
 
-        elif not self.multi_output
+        elif not self.multi_output:
             out = self.fc(out)
             if lam is None:
                 return out
