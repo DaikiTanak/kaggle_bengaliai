@@ -323,7 +323,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
     scheduler2.step(logger["val_loss2"][-1])
     scheduler3.step(logger["val_loss3"][-1])
 
-    slack.notify(text="Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(epoch_idx,
+    slack.notify(text="{} Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(args.name, epoch_idx,
                                                                                                 round(logger["train_loss"][-1], 3),
                                                                                                 round(logger["val_loss"][-1], 3),
                                                                                                 round(logger["train_recall"][-1], 3),
