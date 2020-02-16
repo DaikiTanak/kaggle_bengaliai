@@ -73,6 +73,8 @@ elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
     mode2 = densenet121(if_selayer=True).to(device)
     mode3 = densenet121(if_selayer=True).to(device)
+else:
+    raise ValueError()
 
 
 
