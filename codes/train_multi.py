@@ -292,8 +292,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
                                                                                         epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
                                                                                         epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
 
-    logger["train_loss"].append(np.mean(epoch_logger["train_loss"]))
-    logger["val_loss"].append(np.mean(epoch_logger["val_loss"]))
+    for loss_idx in range(1,4,1):
+        logger["train_loss{}".format(loss_idx)].append(np.mean(epoch_logger["train_loss{}".format(loss_idx)]))
+        logger["val_loss{}".format(loss_idx)].append(np.mean(epoch_logger["val_loss{}".format(loss_idx)]))
 
     logger["val_recall"].append(val_recall)
     logger["train_recall"].append(train_recall)
