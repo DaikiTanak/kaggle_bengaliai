@@ -176,11 +176,11 @@ class SEBottleneck(nn.Module):
 
         # bn - 1*1conv - bn - relu - 3*3conv - bn - relu - 1*1conv - bn
         self.bn1 = nn.BatchNorm2d(inplanes)
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False, )
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.conv2 = conv3x3(planes, planes, stride=stride, groups=groups)
-        self.bn3 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes, planes * expansion, kernel_size=1, bias=False,)
+        self.conv1 = nn.Conv2d(inplanes, width, kernel_size=1, bias=False, )
+        self.bn2 = nn.BatchNorm2d(width)
+        self.conv2 = conv3x3(width, width, stride=stride, groups=groups)
+        self.bn3 = nn.BatchNorm2d(width)
+        self.conv3 = nn.Conv2d(width, planes * expansion, kernel_size=1, bias=False,)
         self.bn4 = nn.BatchNorm2d(planes * expansion)
 
     def forward(self, x):
