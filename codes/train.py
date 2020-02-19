@@ -13,7 +13,7 @@ import torchvision
 # from torchvision import transforms, utils
 
 from dataset import BengalImgDataset, load_pickle_images
-from model import se_resnet34, se_resnet152, densenet121
+from model import se_resnet34, se_resnet152, densenet121, se_resnext101_32x8d, se_resnext50_32x4d
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
 from config import args
 
@@ -55,16 +55,22 @@ cutmix_prob = 0.1
 mixup_prob = 0.1
 
 print("Running device: ", device)
+print("batchsize: ", batchsize)
 
 if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
     model = se_resnet34(num_classes=2, multi_output=True).to(device)
 elif args.model == "resnet152":
     model = se_resnet152(num_classes=2, multi_output=True).to(device)
+elif args.model == "resnext50":
+    model = se_resnext50_32x4d(num_classes=2, multi_output=True).to(device)
+elif args.model == "resnext101":
+    model = se_resnext101_32x8d(num_classes=2, multi_output=True).to(device)
 elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
 else:
     raise ValueError()
+
 
 # train_all = load_train_df()
 _, vowels, graphemes, consonants = load_pickle_images()
@@ -87,7 +93,7 @@ mean = 0.0818658566
 std = 0.22140448
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                              # torchvision.transforms.RandomRotation(degrees=5,),
-                                             torchvision.transforms.RandomAffine(degrees=5, translate=(0.02, 0.02), scale=(0.85, 1.15), shear=None, resample=False, fillcolor=0),
+                                             torchvision.transforms.RandomAffine(degrees=8, translate=(0.01, 0.01), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
                                              torchvision.transforms.ToTensor(),
                                              torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                              # torchvision.transforms.Normalize(mean,std,)])

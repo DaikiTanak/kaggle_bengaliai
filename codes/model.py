@@ -17,6 +17,25 @@ __all__ = ['DPN', 'dpn92', 'dpn98', 'dpn131', 'dpn107', 'dpns', "SimpleNet",
            'se_resnet18', 'se_resnet34', 'se_resnet50', 'se_resnet101', 'se_resnet152',
            "densenet121", "densenet169", "densenet201", "densenet161"]
 
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+def conv3x3(in_planes, out_planes, stride=1, groups=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False, groups=groups)
+
+
+def conv_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        init.xavier_uniform(m.weight, gain=np.sqrt(2))
+        init.constant(m.bias, 0)
+    elif classname.find('BatchNorm') != -1:
+        init.constant(m.weight, 1)
+        init.constant(m.bias, 0)
+
+
+
 
 # Shake-shake implementation from https://github.com/owruby/shake-shake_pytorch/blob/master/models/shakeshake.py
 class ShakeShake(torch.autograd.Function):
@@ -41,9 +60,6 @@ class ShakeShake(torch.autograd.Function):
 
 # SENet
 # https://github.com/moskomule/senet.pytorch/blob/master/senet/se_resnet.py
-
-# from torchvision.models import ResNet
-
 class SELayer(nn.Module):
     def __init__(self, channel, reduction=16):
         super(SELayer, self).__init__()
@@ -63,21 +79,23 @@ class SELayer(nn.Module):
         return x * y.expand_as(x)
 
 
-def conv3x3(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
-
 class SEBasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False, device="cuda:0"):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False, device="cuda:0", groups=1, base_width=64,):
         super(SEBasicBlock, self).__init__()
+        expansion = 1
+
+
+        if groups != 1 or base_width != 64:
+            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
 
         self.relu = nn.ReLU(inplace=True)
         self.se = SELayer(planes, reduction)
         self.downsample = downsample
         self.stride = stride
         self.reduction = reduction
-        self.device=device
+        self.device = device
 
         self.shake_shake = shake_shake
 
@@ -145,24 +163,25 @@ class SEBasicBlock(nn.Module):
 class SEBottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False, groups=1, base_width=64,):
         super(SEBottleneck, self).__init__()
+        expansion = 4
 
         self.relu = nn.ReLU(inplace=True)
-        self.se = SELayer(planes * 4, reduction)
+        self.se = SELayer(planes * expansion, reduction)
         self.downsample = downsample
         self.stride = stride
 
+        width = int(planes * (base_width / 64.)) * groups
+
         # bn - 1*1conv - bn - relu - 3*3conv - bn - relu - 1*1conv - bn
         self.bn1 = nn.BatchNorm2d(inplanes)
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False, )
         self.bn2 = nn.BatchNorm2d(planes)
-
-        self.conv2 = conv3x3(planes, planes, stride=stride)
+        self.conv2 = conv3x3(planes, planes, stride=stride, groups=groups)
         self.bn3 = nn.BatchNorm2d(planes)
-
-        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
-        self.bn4 = nn.BatchNorm2d(planes * 4)
+        self.conv3 = nn.Conv2d(planes, planes * expansion, kernel_size=1, bias=False,)
+        self.bn4 = nn.BatchNorm2d(planes * expansion)
 
     def forward(self, x):
         residual = x
@@ -195,7 +214,7 @@ class ResNet(nn.Module):
     # This ResNet does Manifold-Mixup.
     # https://arxiv.org/pdf/1806.05236.pdf
     def __init__(self, block, layers, num_classes=2, zero_init_residual=True, mixup_hidden=True, shake_shake=False,
-                 first_conv_stride=2, first_pool=True, device="cuda:0", in_channels=1, multi_output=True):
+                 first_conv_stride=2, first_pool=True, device="cuda:0", in_channels=1, multi_output=True, width_per_group=64, groups=1):
         super(ResNet, self).__init__()
         self.mixup_hidden = mixup_hidden
         self.shake_shake = shake_shake
@@ -204,6 +223,8 @@ class ResNet(nn.Module):
         self.first_pool = first_pool
         self.device = device
         self.multi_output = multi_output
+        self.groups = groups
+        self.base_width = width_per_group
 
         # for wide-resnet
         widen_factor = 1
@@ -273,10 +294,7 @@ class ResNet(nn.Module):
         layers.append(block(self.inplanes, planes, stride, downsample))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            if self.shake_shake:
-                layers.append(block(self.inplanes, planes, shake_shake=True))
-            else:
-                layers.append(block(self.inplanes, planes, shake_shake=False))
+            layers.append(block(self.inplanes, planes, shake_shake=self.shake_shake, groups=self.groups, base_width=self.base_width))
 
         return nn.Sequential(*layers)
 
@@ -356,7 +374,6 @@ class ResNet(nn.Module):
 
 
 
-
 def se_resnet18(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
     """Constructs a ResNet-18 model.
     Args:
@@ -409,6 +426,31 @@ def se_resnet152(num_classes, if_mixup=False, if_shake_shake=False, first_conv_s
     model = ResNet(SEBottleneck, [3, 8, 36, 3], num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake, multi_output=multi_output)
     model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
+
+def se_resnext50_32x4d(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
+    r"""SEResNeXt-50 32x4d model from
+    `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    groups = 32
+    width_per_group = 4
+    return ResNet(SEBottleneck, [3, 4, 6, 3], groups=groups, width_per_group=width_per_group, num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake, multi_output=multi_output)
+
+def se_resnext101_32x8d(num_classes, if_mixup=False, if_shake_shake=False, first_conv_stride=2, first_pool=True, multi_output=True):
+    r"""ResNeXt-101 32x8d model from
+    `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    groups = 32
+    width_per_group = 8
+    return ResNet(SEBottleneck, [3, 4, 23, 3], groups=groups, width_per_group=width_per_group, num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake, multi_output=multi_output)
+
+
+
 
 
 
@@ -1055,25 +1097,3 @@ class DPN(nn.Module):
 
 ## WideResNet
 # https://github.com/xternalz/WideResNet-pytorch/blob/master/wideresnet.py
-
-
-def conv3x3(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=True)
-
-def conv_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        init.xavier_uniform(m.weight, gain=np.sqrt(2))
-        init.constant(m.bias, 0)
-    elif classname.find('BatchNorm') != -1:
-        init.constant(m.weight, 1)
-        init.constant(m.bias, 0)
-
-def conv3x3(in_planes, out_planes, stride=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
-
-def conv1x1(in_planes, out_planes, stride=1):
-    """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
