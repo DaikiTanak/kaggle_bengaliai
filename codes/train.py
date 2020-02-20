@@ -134,7 +134,6 @@ logger = defaultdict(list)
 val_best_loss = 1e+10
 
 for epoch_idx in range(1, epoch_num+1, 1):
-    # scheduler.step()
 
     epoch_logger = defaultdict(list)
 
@@ -192,6 +191,9 @@ for epoch_idx in range(1, epoch_num+1, 1):
             loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
             loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
             loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
+
+        elif args.augmix:
+            pass
 
         else:
             out1, out2, out3 = model(inputs)
