@@ -92,7 +92,8 @@ print("#imgs: ", imgs.shape)
 nfold = 5
 mskf = MultilabelStratifiedKFold(n_splits=nfold, random_state=args.seed)
 img_idx_list = [i for i in range(len(imgs))]
-for i, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list)):
+labels = np.hstack((vowels, graphemes, consonants))
+for i, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)):
 
     train_imgs = imgs[train_idx]
     val_imgs = imgs[val_idx]
