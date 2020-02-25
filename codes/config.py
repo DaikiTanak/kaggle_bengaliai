@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--gpu', default=0, type=int, required=False)
 parser.add_argument('--epoch', default=30, type=int, required=False)
-parser.add_argument('--batchsize', default=250, type=int, required=False)
+parser.add_argument('--batchsize', default=400, type=int, required=False)
 parser.add_argument("--lr", default=0.1, type=float, required=False)
 parser.add_argument('--seed', default=46, type=int, required=False)
 parser.add_argument("--model", default="resnet34", type=str, required=False)
