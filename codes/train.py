@@ -96,6 +96,11 @@ labels = np.hstack((np.reshape(vowels, (len(vowels),1)),
                      np.reshape(graphemes, (len(vowels),1)),
                      np.reshape(consonants, (len(vowels),1))))
 print("labels:", labels.shape)
+
+vowels = np.array(vowels)
+graphemes = np.array(graphemes)
+consonants = np.array(consonants)
+
 for i, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)):
 
     train_imgs = imgs[train_idx]
