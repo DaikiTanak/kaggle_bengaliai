@@ -325,7 +325,7 @@ for epoch_idx in range(1, epoch_num+1, 1):
 
         checkpoint = {"model":model.state_dict(),
                       "oprimizer":optimizer.state_dict(),
-                      "cpoch":epoch_idx,
+                      "epoch":epoch_idx,
                       "val_best_loss":val_best_loss}
         torch.save(checkpoint, model_fn)
 
@@ -344,3 +344,6 @@ for epoch_idx in range(1, epoch_num+1, 1):
                    # "lr":{"last_lr":logger["last_lr"]}
                    }
         plot_train_history(history, result_hist_fn)
+
+        logger_fn = "../result/{}_train_log.dat".format(args.name)
+        joblib.dump(logger, logger_fn, compress=9)
