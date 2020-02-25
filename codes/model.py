@@ -78,7 +78,6 @@ class SELayer(nn.Module):
         y = y.view(b, c, 1, 1)
         return x * y.expand_as(x)
 
-
 class SEBasicBlock(nn.Module):
     expansion = 1
 
@@ -159,7 +158,6 @@ class SEBasicBlock(nn.Module):
 
         return out
 
-
 class SEBottleneck(nn.Module):
     expansion = 4
 
@@ -208,8 +206,6 @@ class SEBottleneck(nn.Module):
 
         return out
 
-
-
 class ResNet(nn.Module):
     # This ResNet does Manifold-Mixup.
     # https://arxiv.org/pdf/1806.05236.pdf
@@ -237,13 +233,11 @@ class ResNet(nn.Module):
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
 
-
         self.layer1 = self._make_layer(block, 64*widen_factor, layers[0])
         self.layer2 = self._make_layer(block, 128*widen_factor, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256*widen_factor, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512*widen_factor, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-
 
         if not multi_output:
             self.fc = nn.Linear(512 * block.expansion * widen_factor, num_classes)

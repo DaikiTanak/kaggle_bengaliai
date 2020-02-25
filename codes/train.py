@@ -17,6 +17,10 @@ from model import se_resnet34, se_resnet152, densenet121, se_resnext101_32x8d, s
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
 from config import args
 
+# data split
+# !pip install iterative-stratification
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -80,11 +84,24 @@ imgs = np.tile(imgs, (1,1,1,3))
 # imgs = imgs[:,:,:,0]
 print("#imgs: ", imgs.shape)
 
-# train_info, val_info = train_test_split(train_all, test_size=0.3, random_state=seed, shuffle=True)
-train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
-                                                                                                                                    test_size=0.2,
-                                                                                                                                    random_state=seed,
-                                                                                                                                    shuffle=True)
+# train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
+#                                                                                                                                     test_size=0.2,
+#                                                                                                                                     random_state=seed,
+#                                                                                                                                     shuffle=True)
+
+nfolds = 5
+mskf = MultilabelStratifiedKFold(n_splits=nfold, random_state=args.seed)
+img_idx_list = [i for i in range(len(imgs))]
+for i, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list)):
+
+    train_imgs = imgs[train_idx]
+    val_imgs = imgs[val_idx]
+    train_vowels = vowels[train_idx]
+    val_vowels = vowels[val_idx]
+    train_graphemes = graphemes[train_idx]
+    val_graphemes = graphemes[val_idx]
+    train_consonants = consonants[train_idx]
+    val_consonants = consonants[val_idx]
 
 
 # ----------------------------------------------------------------------------------------------------
