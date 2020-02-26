@@ -247,7 +247,12 @@ for epoch_idx in range(1, epoch_num+1, 1):
             loss2 = loss_fn(out2, labels2)
             loss3 = loss_fn(out3, labels3)
 
-        loss = loss1 + loss2 + loss3
+
+        # weighted loss?
+        if args.weighted_loss:
+            loss = loss1 + loss2*2 + loss3
+        else:
+            loss = loss1 + loss2 + loss3
 
         optimizer.zero_grad()
         loss.backward()

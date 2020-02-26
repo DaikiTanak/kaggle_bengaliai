@@ -24,6 +24,7 @@ parser.add_argument('--cutout_size', default=0.5, type=float, required=False)
 parser.add_argument('--augmix', action='store_true', default=False, required=False, help="aug-mix regularization")
 parser.add_argument("--mixup_alpha", default=0.1, type=float, required=False)
 parser.add_argument("--cutmix_alpha", default=0.1, type=float, required=False)
+parser.add_argument('--weighted_loss', action='store_true', default=False, required=False)
 
 
 args = parser.parse_args()
