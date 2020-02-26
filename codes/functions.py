@@ -102,3 +102,40 @@ def plot_train_history(history, figure_name):
 
     plt.savefig(figure_name)
     plt.close()
+
+
+
+def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False):
+    """CoarseDropout of the square regions in the image.
+
+    Args:
+        img_batch: torch.tensor
+
+    Targets:
+        image
+
+    Image types:
+        uint8, float32
+
+    Reference:
+    |  https://arxiv.org/abs/1708.04552
+    |  https://github.com/uoguelph-mlrg/Cutout/blob/master/util/cutout.py
+    |  https://github.com/aleju/imgaug/blob/master/imgaug/augmenters/arithmetic.py
+    """
+
+    batchsize, channels, height, width = img_batch.size()
+
+    # sample box center from uniform dist.
+    x = np.random.randint(low=0, high=width)
+    y = np.random.randint(low=0, high=height)
+
+    y1 = np.clip(y - max_h // 2, 0, height)
+    y2 = np.clip(y1 + max_h, 0, height)
+    x1 = np.clip(x - max_w // 2, 0, width)
+    x2 = np.clip(x1 + max_w, 0, width)
+
+    if random_erasing:
+        fill_value = np.random.randint(255)/255
+
+    img_batch[:, :, y1:y2, x1:x2] = fill_value
+    return img_batch

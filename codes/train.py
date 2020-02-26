@@ -14,7 +14,7 @@ import torchvision
 
 from dataset import BengalImgDataset, load_pickle_images
 from model import se_resnet34, se_resnet152, densenet121, se_resnext101_32x8d, se_resnext50_32x4d
-from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall
+from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall, cutout_aug
 from config import args
 
 # data split
@@ -57,6 +57,7 @@ height = 137
 width = 236
 cutmix_prob = 0.1
 mixup_prob = 0.1
+cutout_prob = 0.5
 
 print("Running device: ", device)
 print("batchsize: ", batchsize)
@@ -152,7 +153,7 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuf
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
 #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=5e-5, eps=1e-08)
 
 #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -168,6 +169,8 @@ for epoch_idx in range(1, epoch_num+1, 1):
     model.train()
     for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
         inputs = inputs[:, 0, :, :].unsqueeze(1)
+
+        # inputs: batchsize * 1 * h * w
         inputs = inputs.to(device)
 
         labels1 = labels1.to(device)
@@ -219,6 +222,20 @@ for epoch_idx in range(1, epoch_num+1, 1):
             loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
             loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
             loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
+
+        elif args.cutout and r < cutout_prob:
+            lam = np.random.beta(1, 1)
+            max_w = int(128*args.cutout_size)
+            max_h = int(128*args.cutout_size)
+
+            augmented_iuputs = cutout_aug(inputs, max_w, max_h)
+
+            out1, out2, out3 = model(augmented_iuputs)
+            loss1 = loss_fn(out1, labels1)
+            loss2 = loss_fn(out2, labels2)
+            loss3 = loss_fn(out3, labels3)
+
+
 
         elif args.augmix:
             pass
