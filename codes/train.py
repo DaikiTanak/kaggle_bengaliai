@@ -114,6 +114,7 @@ graphemes = np.array(graphemes)
 consonants = np.array(consonants)
 
 for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)):
+    print("Start fold:{}".format(fold_idx+1))
 
     train_imgs = imgs[train_idx]
     val_imgs = imgs[val_idx]
@@ -265,10 +266,10 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 loss3 = loss_fn(out3, labels3)
 
             # weighted loss?
-            if args.weighted_loss:
-                loss = loss1 + loss2*2 + loss3
-            else:
-                loss = loss1 + loss2 + loss3
+            # if args.weighted_loss:
+            #     loss = loss1 + loss2*2 + loss3
+            # else:
+            loss = loss1 + loss2 + loss3
 
             optimizer.zero_grad()
             loss.backward()
