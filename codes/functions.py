@@ -104,6 +104,45 @@ def plot_train_history(history, figure_name):
     plt.close()
 
 
+def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3):
+    """yielding random erased imgs
+
+    Args:
+        img_batch: torch.tensor
+        sl: minimum ratio of area of bbox
+        sh: maximum ratio of area of bbox
+        r1: minimum value of aspect ratio of bbox.
+        r2: maximum value of aspect ratio of bbox.
+
+    Targets:
+        image : augmented
+
+    Image types:
+        uint8, float32
+
+    Reference:
+    |  https://arxiv.org/pdf/1708.04896.pdf
+
+    """
+
+    batchsize, channels, height, width = img_batch.size()
+
+    # sample box center from uniform dist.
+    x = np.random.randint(low=0, high=width)
+    y = np.random.randint(low=0, high=height)
+
+    S = H * W
+
+    Se = np.random.uniform(sl, sh) * S # 画像に重畳する矩形の面積
+    re = np.random.uniform(r1, r2) # 画像に重畳する矩形のアスペクト比
+
+    He = int(np.sqrt(Se * re)) # 画像に重畳する矩形のHeight
+    We = int(np.sqrt(Se / re)) # 画像に重畳する矩形のWidth
+
+    xe = np.random.randint(0, W) # 画像に重畳する矩形のx座標
+    ye = np.random.randint(0, H) # 画像に重畳する矩形のy座標
+
+
 
 def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False, normalize_mean=0, normalize_std=1):
     """CoarseDropout of the square regions in the image.

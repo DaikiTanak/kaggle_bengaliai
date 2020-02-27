@@ -3,9 +3,13 @@
 
 # python train.py --name resnet34_stratified --model resnet34 --epoch 80 --lr 0.1
 # python train.py --name resnet34_stratified_cutmix.4 --model resnet34 --cutmix --cutmix_alpha 0.4 --epoch 150 --lr 0.1
-python train.py --name resnet34_stratified_weighted_loss --weighted_loss --model resnet34 --epoch 60 --lr 0.1
-python train.py --cutout --cutout_size 0.5 --model resnet34 --name resnet34_stratified_cutout.5 --batchsize 300 --lr 0.1 --cutout --epoch 100
-python train.py --cutout --cutout_size 0.3 --model resnet34 --name resnet34_stratified_cutout.3 --batchsize 300 --lr 0.1 --cutout --epoch 100
+# python train.py --name resnet34_stratified_weighted_loss --weighted_loss --model resnet34 --epoch 60 --lr 0.1
+python train.py --cutout --cutout_size 0.1 --model resnet34 --name resnet34_stratified_cutout.1 --batchsize 300 --lr 0.1 --cutout --epoch 100
+python train.py --cutout --cutout_size 0.2 --model resnet34 --name resnet34_stratified_cutout.2 --batchsize 300 --lr 0.1 --cutout --epoch 100
+python train.py --cutout --cutout_size 0.4 --model resnet34 --name resnet34_stratified_cutout.4 --batchsize 300 --lr 0.1 --cutout --epoch 100
+python train.py --cutout --cutout_size 0.6 --model resnet34 --name resnet34_stratified_cutout.6 --batchsize 300 --lr 0.1 --cutout --epoch 100
+
+
 #python train.py --name resnet152_augment --model resnet152 --epoch 60 --lr 0.1
 #python train.py --name densenet_augment --model densenet --epoch 60 --lr 0.1
 
