@@ -158,8 +158,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                                     consonant=val_consonants,
                                     transform=val_transforms)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True, num_workers=6)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuffle=False, num_workers=6)
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
