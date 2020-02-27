@@ -13,8 +13,20 @@ import torchvision
 # from torchvision import transforms, utils
 
 from dataset import BengalImgDataset, load_pickle_images
-from model import se_resnet34, se_resnet152, densenet121, se_resnext101_32x8d, se_resnext50_32x4d
-from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall, cutout_aug
+from model import (
+    se_resnet34,
+    se_resnet152,
+    densenet121,
+    se_resnext101_32x8d,
+    se_resnext50_32x4d
+    )
+from functions import (
+    load_train_df,
+    plot_train_history,
+    calc_hierarchical_macro_recall,
+    cutout_aug,
+    random_erasing_aug,
+    )
 from config import args
 
 # data split
@@ -56,6 +68,7 @@ width = 236
 cutmix_prob = 0.1
 mixup_prob = 0.1
 cutout_prob = 0.5
+random_erasing_prob = 0.5
 
 print("Running device: ", device)
 print("batchsize: ", batchsize)
@@ -121,7 +134,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     std = 0.22140448
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  # torchvision.transforms.RandomRotation(degrees=5,),
-                                                 torchvision.transforms.RandomAffine(degrees=8, translate=(0.01, 0.01), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
+                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                                  # torchvision.transforms.Normalize(mean,std,)])
@@ -227,6 +240,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_h = int(128*args.cutout_size)
 
                 augmented_iuputs = cutout_aug(inputs, max_w, max_h)
+
+                out1, out2, out3 = model(augmented_iuputs)
+                loss1 = loss_fn(out1, labels1)
+                loss2 = loss_fn(out2, labels2)
+                loss3 = loss_fn(out3, labels3)
+
+            elif args.random_erasing and r < random_erasing_prob:
+                augmented_iuputs = random_erasing_aug(inputs,)
 
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)

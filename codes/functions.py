@@ -104,7 +104,7 @@ def plot_train_history(history, figure_name):
     plt.close()
 
 
-def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3):
+def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.0818658566, std=0.22140448):
     """yielding random erased imgs
 
     Args:
@@ -113,6 +113,8 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3):
         sh: maximum ratio of area of bbox
         r1: minimum value of aspect ratio of bbox.
         r2: maximum value of aspect ratio of bbox.
+        mean: mean value used in normalizing images
+        value: standard deviation value used in normalizing images
 
     Targets:
         image : augmented
@@ -122,7 +124,6 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3):
 
     Reference:
     |  https://arxiv.org/pdf/1708.04896.pdf
-
     """
 
     batchsize, channels, height, width = img_batch.size()
@@ -131,16 +132,28 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3):
     x = np.random.randint(low=0, high=width)
     y = np.random.randint(low=0, high=height)
 
-    S = H * W
+    S = height * width
 
-    Se = np.random.uniform(sl, sh) * S # 画像に重畳する矩形の面積
-    re = np.random.uniform(r1, r2) # 画像に重畳する矩形のアスペクト比
+    # sampling bbox area and bbox aspect ratio from uniform dist.
+    Se = np.random.uniform(sl, sh) * S
+    re = np.random.uniform(r1, r2)
 
-    He = int(np.sqrt(Se * re)) # 画像に重畳する矩形のHeight
-    We = int(np.sqrt(Se / re)) # 画像に重畳する矩形のWidth
+    # box height and width
+    box_h = int(np.sqrt(Se * re))
+    box_w = int(np.sqrt(Se / re))
 
-    xe = np.random.randint(0, W) # 画像に重畳する矩形のx座標
-    ye = np.random.randint(0, H) # 画像に重畳する矩形のy座標
+    # sample box center from uniform dist.
+    x = np.random.randint(low=0, high=width)
+    y = np.random.randint(low=0, high=height)
+
+    y1 = np.clip(y - box_h // 2, 0, height)
+    y2 = np.clip(y1 + box_h, 0, height)
+    x1 = np.clip(x - box_w // 2, 0, width)
+    x2 = np.clip(x1 + box_w, 0, width)
+
+    fill_value = (np.random.randint(255)/255 - mean) / std
+    img_batch[:, :, y1:y2, x1:x2] = fill_value
+    return img_batch
 
 
 

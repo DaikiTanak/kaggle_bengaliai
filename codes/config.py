@@ -24,8 +24,10 @@ parser.add_argument('--cutout_size', default=0.5, type=float, required=False)
 parser.add_argument('--augmix', action='store_true', default=False, required=False, help="aug-mix regularization")
 parser.add_argument("--mixup_alpha", default=0.1, type=float, required=False)
 parser.add_argument("--cutmix_alpha", default=0.1, type=float, required=False)
-parser.add_argument('--weighted_loss', action='store_true', default=False, required=False)
 parser.add_argument('--full_cv', action='store_true', default=False, required=False)
+parser.add_argument("--affine_translate", default=0.01, type=float, required=False, help="shift parameter in affine transformation")
+parser.add_argument('--affine_rotate', default=8, type=int, required=False)
+parser.add_argument('--random_erasing', action='store_true', default=False, required=False, help="random-erasing regularization")
 
 
 
