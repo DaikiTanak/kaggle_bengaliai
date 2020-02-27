@@ -121,7 +121,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     std = 0.22140448
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  # torchvision.transforms.RandomRotation(degrees=5,),
-                                                 torchvision.transforms.RandomAffine(degrees=8, translate=(0.05, 0.05), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
+                                                 torchvision.transforms.RandomAffine(degrees=8, translate=(0.01, 0.01), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                                  # torchvision.transforms.Normalize(mean,std,)])
