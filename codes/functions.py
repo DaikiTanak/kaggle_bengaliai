@@ -105,14 +105,18 @@ def plot_train_history(history, figure_name):
 
 
 
-def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False):
+def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False, normalize_mean=0, normalize_std=1):
     """CoarseDropout of the square regions in the image.
 
     Args:
         img_batch: torch.tensor
+        max_w(int): box width
+        max_h(int): box height
+        fill_value(int): pixel value to fill the box.
+        random_erasing(bool): whether to decide the pixel value randomly.
 
     Targets:
-        image
+        image : augmented
 
     Image types:
         uint8, float32
