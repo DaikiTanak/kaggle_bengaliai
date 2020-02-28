@@ -157,15 +157,17 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.081865
 
 
 
-def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False, normalize_mean=0, normalize_std=1):
+def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.0818658566, std=0.22140448):
     """CoarseDropout of the square regions in the image.
 
     Args:
-        img_batch: torch.tensor
+        img_batch: torch.tensor which is normlized by (X-mean)/std
         max_w(int): box width
         max_h(int): box height
         fill_value(int): pixel value to fill the box.
-        random_erasing(bool): whether to decide the pixel value randomly.
+        random_fill(bool): whether to decide the pixel value randomly, 0~255.
+        mean: mean value used in normalizing images
+        value: standard deviation value used in normalizing images
 
     Targets:
         image : augmented
@@ -190,8 +192,8 @@ def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_erasing=False, norm
     x1 = np.clip(x - max_w // 2, 0, width)
     x2 = np.clip(x1 + max_w, 0, width)
 
-    if random_erasing:
-        fill_value = np.random.randint(255)/255
+    if random_fill:
+        fill_value = (np.random.randint(255)/255 - mean) / std
 
     img_batch[:, :, y1:y2, x1:x2] = fill_value
     return img_batch

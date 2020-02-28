@@ -17,7 +17,6 @@ python train.py --model resnet34 --name resnet34_stratified_shift.1 --batchsize 
 python train.py --model resnet34 --name resnet34_stratified_shift.2 --batchsize 500 --lr 0.1 --epoch 100 --affine_translate 0.2
 
 
-
 #python train.py --name resnet152_augment --model resnet152 --epoch 60 --lr 0.1
 #python train.py --name densenet_augment --model densenet --epoch 60 --lr 0.1
 

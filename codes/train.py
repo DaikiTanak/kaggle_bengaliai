@@ -248,7 +248,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 loss3 = loss_fn(out3, labels3)
 
             elif args.random_erasing and r < random_erasing_prob:
-                augmented_iuputs = random_erasing_aug(inputs,)
+                augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2)
 
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
