@@ -3,10 +3,6 @@
 
 # resnet34: batchsize 500
 
-# python train.py --name resnet34_stratified --model resnet34 --epoch 80 --lr 0.1
-# python train.py --name resnet34_stratified_cutmix.4 --model resnet34 --cutmix --cutmix_alpha 0.4 --epoch 150 --lr 0.1
-# python train.py --name resnet34_stratified_weighted_loss --weighted_loss --model resnet34 --epoch 60 --lr 0.1
-
 python train.py --cutout --cutout_size 0.5 --model resnet34 --name resnet34_stratified_cutout.5 --batchsize 500 --lr 0.1 --epoch 100
 python train.py --cutout --cutout_size 0.8 --model resnet34 --name resnet34_stratified_cutout.8 --batchsize 500 --lr 0.1 --epoch 100
 

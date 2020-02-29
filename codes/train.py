@@ -173,6 +173,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
     logger = defaultdict(list)
     val_best_loss = 1e+10
+    val_best_recall = 0
 
     for epoch_idx in range(1, epoch_num+1, 1):
 
@@ -240,7 +241,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_w = int(128*args.cutout_size)
                 max_h = int(128*args.cutout_size)
 
-                augmented_iuputs = cutout_aug(inputs, max_w, max_h)
+                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random)
 
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
@@ -364,14 +365,19 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         for k, v in logger.items():
             print(k, v[-1])
 
+        if logger["val_recall"][-1] > val_best_recall:
+            val_best_recall = logger["val_recall"][-1]
+
         if logger["val_loss"][-1] < val_best_loss:
             val_best_loss = logger["val_loss"][-1]
 
             checkpoint = {"model":model.state_dict(),
                           "oprimizer":optimizer.state_dict(),
                           "epoch":epoch_idx,
-                          "val_best_loss":val_best_loss}
+                          "val_best_loss":val_best_loss,
+                          "val_best_recall":val_best_recall}
             torch.save(checkpoint, model_fn)
+
 
         if epoch_idx % 1 == 0:
             history = {"loss":{"train":logger["train_loss"],
