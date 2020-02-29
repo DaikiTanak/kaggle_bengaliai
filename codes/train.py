@@ -186,6 +186,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             # inputs: batchsize * 1 * h * w
             inputs = inputs.to(device)
 
+
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
@@ -241,8 +242,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_w = int(128*args.cutout_size)
                 max_h = int(128*args.cutout_size)
 
-                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random)
-
+                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random, device=device)
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
