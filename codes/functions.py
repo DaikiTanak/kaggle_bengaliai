@@ -7,6 +7,8 @@ from collections import defaultdict
 from sklearn.model_selection import train_test_split
 import sklearn.metrics
 
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 data_folder = "../data"
