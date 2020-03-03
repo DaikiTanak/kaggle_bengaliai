@@ -2,7 +2,7 @@
 
 
 # resnet34: batchsize 500
-
+# densenet121: 200
 
 
 # python train.py --random_erasing --model resnet34 --name resnet34_stratified_random_erasing --batchsize 500 --lr 0.1 --epoch 100
@@ -27,7 +27,7 @@
 
 python train.py --model resnet34 --name resnet34_stratified_shift.5_cutout.6_random --batchsize 500 --lr 0.1 --epoch 150 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --affine_rotate 11
 # python train.py --model densenet --name densenet_stratified_shift.5 --batchsize 200 --lr 0.1 --epoch 150 --affine_translate 0.5 --affine_rotate 11
-python train.py --model resnet34 --name resnet34_stratified_random_erasing_sl.25_sh_.4 --random_erasing --sl 0.25 --sh 0.4 --batchsize 500 --lr 0.1 --epoch 150
+python train.py --model resnet34 --name resnet34_stratified_random_erasing_sl.25_sh_.4 --random_erasing --sl 0.25 --sh 0.4 --batchsize 500 --lr 0.1 --epoch 100
 
 
 
