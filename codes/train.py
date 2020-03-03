@@ -96,6 +96,9 @@ mean = 0.0818658566
 std = 0.22140448
 if not args.original:
     imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
+
+    print("Use crop&resized images.")
+
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  # torchvision.transforms.RandomRotation(degrees=5,),
                                                  torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
@@ -109,6 +112,9 @@ if not args.original:
                                                  # torchvision.transforms.Normalize(mean,std)])
 
 else:
+    print("Use original images.")
+    imgs = np.asarray(imgs)
+
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.Resize(size=(size, size), interpolation=2),
                                                  # torchvision.transforms.RandomRotation(degrees=5,),
@@ -123,10 +129,11 @@ else:
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                                  # torchvision.transforms.Normalize(mean,std)])
 
+print("#imgs: ", imgs.shape)
 # convert into 3-dim images
 imgs = np.tile(imgs, (1,1,1,3))
 # imgs = imgs[:,:,:,0]
-print("#imgs: ", imgs.shape)
+print("#tiled imgs: ", imgs.shape)
 
 # train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
 #                                                                                                                                     test_size=0.2,
@@ -205,7 +212,6 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
             # inputs: batchsize * 1 * h * w
             inputs = inputs.to(device)
-
 
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
