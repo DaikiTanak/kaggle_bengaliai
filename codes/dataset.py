@@ -133,6 +133,26 @@ def crop_resize(img0, size=SIZE, pad=16):
     return cv2.resize(img,(size,size))
 
 
+def save_prerosessed_imgs(imgs):
+    HEIGHT = 137
+    WIDTH = 236
+    SIZE = 128
+    # save images
+    cropped_imgs = []
+    for idx in tqdm(range(len(imgs))):
+        img = imgs[idx]
+        #somehow the original input is inverted
+        img0 = 255 - imgs[idx]
+        img0 = img0.reshape([HEIGHT, WIDTH])
+
+        #normalize each image by its max val
+        img1 = (img0*(255.0/img0.max())).astype(np.uint8)
+        img1 = crop_resize(img1)
+        img1 = img1.reshape([SIZE, SIZE, 1])
+        cropped_imgs.append(img1)
+
+    pd.to_pickle(cropped_imgs, "../data/cropped_imgs.pkl")
+    return
 
 if __name__ == "__main__":
     # save all train images.
