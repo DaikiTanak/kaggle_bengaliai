@@ -65,6 +65,7 @@ lr = args.lr
 device = "cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
+size = 128
 cutmix_prob = 0.1
 mixup_prob = 0.1
 cutout_prob = 0.5
@@ -89,8 +90,39 @@ else:
 
 
 # train_all = load_train_df()
-_, vowels, graphemes, consonants = load_pickle_images()
-imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
+imgs, vowels, graphemes, consonants = load_pickle_images()
+
+mean = 0.0818658566
+std = 0.22140448
+if not args.original:
+    imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
+    transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                                 # torchvision.transforms.RandomRotation(degrees=5,),
+                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
+                                                 torchvision.transforms.ToTensor(),
+                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                                 # torchvision.transforms.Normalize(mean,std,)])
+
+    val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                                 torchvision.transforms.ToTensor(),
+                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                                 # torchvision.transforms.Normalize(mean,std)])
+
+else:
+    transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                                 torchvision.transforms.Resize(size=(size, size), interpolation=2),
+                                                 # torchvision.transforms.RandomRotation(degrees=5,),
+                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
+                                                 torchvision.transforms.ToTensor(),
+                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                                 # torchvision.transforms.Normalize(mean,std,)])
+
+    val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                                torchvision.transforms.Resize(size=(size, size), interpolation=2),
+                                                 torchvision.transforms.ToTensor(),
+                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                                 # torchvision.transforms.Normalize(mean,std)])
+
 # convert into 3-dim images
 imgs = np.tile(imgs, (1,1,1,3))
 # imgs = imgs[:,:,:,0]
@@ -131,19 +163,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
     # ----------------------------------------------------------------------------------------------------
     # set up dataset, models, optimizer
-    mean = 0.0818658566
-    std = 0.22140448
-    transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 # torchvision.transforms.RandomRotation(degrees=5,),
-                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std,)])
 
-    val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std)])
 
     # train_dataset = BengalDataset(df=train_info, transform=transforms)
     # val_dataset = BengalDataset(df=val_info, transform=transforms)
