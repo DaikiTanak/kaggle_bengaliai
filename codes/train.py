@@ -211,7 +211,6 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             inputs = inputs[:, 0, :, :].unsqueeze(1)
 
             # inputs: batchsize * 1 * h * w
-            inputs = inputs.to(device)
 
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
@@ -236,6 +235,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 # adjust lambda to exactly match pixel ratio
                 lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
                 # compute output
+                inputs = inputs.to(device)
+
                 out1, out2, out3 = model(inputs)
                 # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
@@ -257,6 +258,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 labels2_b = labels2[rand_index]
                 labels3_b = labels3[rand_index]
 
+                inputs = inputs.to(device)
+
                 out1, out2, out3 = model(inputs)
                 # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
@@ -268,14 +271,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_w = int(128*args.cutout_size)
                 max_h = int(128*args.cutout_size)
 
-                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random, device=device)
+                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
 
             elif args.random_erasing and r < random_erasing_prob:
-                augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2, device=device)
+                augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2).to(device)
 
                 out1, out2, out3 = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
@@ -286,6 +289,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 pass
 
             else:
+                inputs = inputs.to(device)
+
                 out1, out2, out3 = model(inputs)
                 # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
                 loss1 = loss_fn(out1, labels1)

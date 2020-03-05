@@ -107,7 +107,7 @@ def plot_train_history(history, figure_name):
     plt.close()
 
 
-def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.0818658566, std=0.22140448, device="cuda"):
+def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.0818658566, std=0.22140448):
     """yielding random erased imgs
 
     Args:
@@ -156,7 +156,7 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.081865
 
     # fill_value = (np.random.randint(255)/255 - mean) / std
     fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1))/255 - mean) / std
-    fill_value = fill_value.to(device)
+    fill_value = fill_value#.to(device)
 
     img_batch[:, :, y1:y2, x1:x2] = fill_value
     return img_batch
@@ -200,7 +200,7 @@ def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.
 
     if random_fill:
         fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1))/255 - mean) / std
-        fill_value = fill_value.to(device)
+        fill_value = fill_value#.to(device)
 
     img_batch[:, :, y1:y2, x1:x2] = fill_value
     return img_batch
