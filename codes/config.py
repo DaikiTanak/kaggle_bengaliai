@@ -31,6 +31,7 @@ parser.add_argument('--affine_rotate', default=8, type=int, required=False)
 parser.add_argument('--affine_scale', default=0.05, type=float, required=False)
 parser.add_argument('--random_erasing', action='store_true', default=False, required=False, help="random-erasing regularization")
 parser.add_argument('--original', action='store_true', default=False, required=False, help="using original images as inputs")
+parser.add_argument('--lr_drop', default=0.33, type=float, required=False)
 
 # followings are for random-erasing
 parser.add_argument("--sl", default=0.02, type=float, required=False)

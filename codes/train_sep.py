@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
 import joblib
-
+import sklearn
 import slackweb
 
 import torch
@@ -16,6 +16,9 @@ from dataset import BengalImgDataset, load_pickle_images
 from model import se_resnet34, se_resnet152, densenet121
 from functions import load_train_df, plot_train_history,calc_hierarchical_macro_recall, cutout_aug
 from config import args
+
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -43,7 +46,7 @@ def rand_bbox(size, lam):
 # configs
 data_folder = "../data"
 
-model2_fn = "../models/{}_label2.dat".format(args.name)
+model_fn = "../models/{}_label2.dat".format(args.name)
 
 result_hist_fn = "../result/{}_train_history.png".format(args.name)
 seed = args.seed
@@ -66,9 +69,13 @@ if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
     model = se_resnet34(num_classes=168, multi_output=False).to(device)
 elif args.model == "resnet152":
-    model2 = se_resnet152(num_classes=168, multi_output=False).to(device)
+    model = se_resnet152(num_classes=168, multi_output=False).to(device)
 elif args.model == "densenet":
     mode2 = densenet121(if_selayer=True).to(device)
+elif args.model == "resnext50":
+    model = se_resnext50_32x4d(num_classes=168, multi_output=True).to(device)
+elif args.model == "resnext101":
+    model = se_resnext101_32x8d(num_classes=168, multi_output=True).to(device)
 else:
     raise ValueError()
 
@@ -148,14 +155,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=5e-5, eps=1e-08)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.33, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
     loss_fn = torch.nn.CrossEntropyLoss()
     # ----------------------------------------------------------------------------------------------------
 
     logger = defaultdict(list)
-    val_best_loss = 1e+10
-    val_best_recall = 0
+    val_best_loss2 = 1e+10
+    val_best_recall2 = 0
 
     for epoch_idx in range(1, epoch_num+1, 1):
         # scheduler.step()
@@ -177,6 +184,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_h = int(128*args.cutout_size)
 
                 augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random, device=device)
+                augmented_iuputs = augmented_iuputs.to(device)
                 out2 = model(augmented_iuputs)
                 # loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
@@ -185,13 +193,13 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             else:
                 # compute output
                 inputs_ = inputs.to(device)
-                out2 = model2(inputs_)
+                out2 = model(inputs_)
                 loss2 = loss_fn(out2, labels2)
 
 
-            optimizer2.zero_grad()
+            optimizer.zero_grad()
             loss2.backward()
-            optimizer2.step()
+            optimizer.step()
 
 
             epoch_logger["train_loss2"].append(loss2.item())
@@ -211,14 +219,12 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
                 # compute output
                 inputs_ = inputs.to(device)
-                out2 = model2(inputs_)
+                out2 = model(inputs_)
 
                 loss2 = loss_fn(out2, labels2)
 
                 epoch_logger["val_loss2"].append(loss2.item())
-
                 epoch_logger["val_label2"].extend(labels2.cpu().numpy())
-
                 epoch_logger["val_label2_pred"].extend(out2.cpu().numpy())
 
         # calc macro-averaged recall on validation dataset
@@ -227,24 +233,28 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         for k in ["val_label2_pred"]:
             epoch_logger[k] = np.argmax(epoch_logger[k], axis=1)
 
-        train_recall1, train_recall2, train_recall3, train_recall = calc_hierarchical_macro_recall(epoch_logger["train_label1"], epoch_logger["train_label1_pred"],
-                                                                                                    epoch_logger["train_label2"], epoch_logger["train_label2_pred"],
-                                                                                                    epoch_logger["train_label3"], epoch_logger["train_label3_pred"],)
+        # train_recall1, train_recall2, train_recall3, train_recall = calc_hierarchical_macro_recall(epoch_logger["train_label1"], epoch_logger["train_label1_pred"],
+        #                                                                                             epoch_logger["train_label2"], epoch_logger["train_label2_pred"],
+        #                                                                                             epoch_logger["train_label3"], epoch_logger["train_label3_pred"],)
+        #
+        #
+        # val_recall1, val_recall2, val_recall3, val_recall = calc_hierarchical_macro_recall(epoch_logger["val_label1"], epoch_logger["val_label1_pred"],
+        #                                                                                     epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
+        #                                                                                     epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
+
+        train_recall2 = sklearn.metrics.recall_score(epoch_logger["train_label2"], epoch_logger["train_label2_pred"], average='macro')
+        val_recall2 = sklearn.metrics.recall_score(epoch_logger["val_label2"], epoch_logger["val_label2_pred"], average='macro')
 
 
-        val_recall1, val_recall2, val_recall3, val_recall = calc_hierarchical_macro_recall(epoch_logger["val_label1"], epoch_logger["val_label1_pred"],
-                                                                                            epoch_logger["val_label2"], epoch_logger["val_label2_pred"],
-                                                                                            epoch_logger["val_label3"], epoch_logger["val_label3_pred"],)
-
-        logger["train_loss2".format(loss_idx)].append(np.mean(epoch_logger["train_loss2".format(loss_idx)]))
-        logger["val_loss2".format(loss_idx)].append(np.mean(epoch_logger["val_loss2".format(loss_idx)]))
+        logger["train_loss2"].append(np.mean(epoch_logger["train_loss2"]))
+        logger["val_loss2"].append(np.mean(epoch_logger["val_loss2"]))
 
 
         logger["train_recall2"].append(train_recall2)
         logger["val_recall2"].append(val_recall2)
 
         # weighted loss
-        scheduler2.step(logger["val_loss2"][-1])
+        scheduler.step(logger["val_loss2"][-1])
 
         slack.notify(text="{} Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(args.name, epoch_idx,
                                                                                                     round(logger["train_loss2"][-1], 3),
@@ -252,19 +262,22 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                                                                                                     round(logger["train_recall2"][-1], 3),
                                                                                                     round(logger["val_recall2"][-1], 3)))
 
-        for k, v in logger.items():
-            print(k, v[-1])
+        # for k, v in logger.items():
+        #     print(k, v[-1])
 
+        if logger["val_recall2"][-1] > val_best_recall2:
+            val_best_recall2 = logger["val_recall2"][-1]
 
 
         if logger["val_loss2"][-1] < val_best_loss2:
             val_best_loss2 = logger["val_loss2"][-1]
 
-            checkpoint = {"model":model2.state_dict(),
-                          "oprimizer":optimizer2.state_dict(),
-                          "cpoch":epoch_idx,
-                          "val_best_loss":val_best_loss2}
-            torch.save(checkpoint, model2_fn)
+            checkpoint = {"model":model.state_dict(),
+                          "oprimizer":optimizer.state_dict(),
+                          "epoch":epoch_idx,
+                          "val_best_loss":val_best_loss2,
+                          "val_best_recall":val_best_recall2}
+            torch.save(checkpoint, model_fn)
 
         if epoch_idx % 1 == 0:
             history = {
@@ -272,8 +285,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                                           "validation":logger["val_loss2"]},
 
                        "recall":{
-                                "train_label2":logger["train_recall_label2"],
-                                "val_label2":logger["val_recall_label2"],
+                                "train_label2":logger["train_recall2"],
+                                "val_label2":logger["val_recall2"],
                                 },
                        # "lr":{"last_lr":logger["last_lr"]}
                        }
