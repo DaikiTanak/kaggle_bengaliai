@@ -258,6 +258,13 @@ class ResNet(nn.Module):
             self.fc3.add_module("relu1", nn.ReLU(True))
             self.fc3.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 7))
 
+
+            # self.fc_all = nn.Sequential()
+            # self.fc_all.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
+            # self.fc_all.add_module("relu1", nn.ReLU(True))
+            # self.fc_all.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 11+168+7))
+
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # Heの初期化
@@ -353,6 +360,12 @@ class ResNet(nn.Module):
             out1 = self.fc1(out)
             out2 = self.fc2(out)
             out3 = self.fc3(out)
+
+            # out = self.fc_all(out)
+            # out1 = out[:, 11]
+            # out2 = out[:, 168]
+            # out3 = out[:, 7]
+
 
             if lam is None:
                 return out1, out2, out3
