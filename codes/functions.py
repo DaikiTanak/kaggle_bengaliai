@@ -155,7 +155,7 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.081865
     x2 = np.clip(x1 + box_w, 0, width)
 
     # fill_value = (np.random.randint(255)/255 - mean) / std
-    fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1))/255 - mean) / std
+    fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1))/255 - mean).float() / std
     fill_value = fill_value#.to(device)
 
     img_batch[:, :, y1:y2, x1:x2] = fill_value
@@ -163,7 +163,7 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.081865
 
 
 
-def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.0818658566, std=0.22140448, device="cuda"):
+def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.0818658566, std=0.22140448):
     """CoarseDropout of the square regions in the image.
 
     Args:
@@ -186,8 +186,9 @@ def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.
     |  https://github.com/uoguelph-mlrg/Cutout/blob/master/util/cutout.py
     |  https://github.com/aleju/imgaug/blob/master/imgaug/augmenters/arithmetic.py
     """
+    img_batch_ = img_batch.clone()
 
-    batchsize, channels, height, width = img_batch.size()
+    batchsize, channels, height, width = img_batch_.size()
 
     # sample box center from uniform dist.
     x = np.random.randint(low=0, high=width)
@@ -198,9 +199,10 @@ def cutout_aug(img_batch, max_w, max_h, fill_value=0, random_fill=False, mean=0.
     x1 = np.clip(x - max_w // 2, 0, width)
     x2 = np.clip(x1 + max_w, 0, width)
 
-    if random_fill:
-        fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1))/255 - mean) / std
-        fill_value = fill_value#.to(device)
 
-    img_batch[:, :, y1:y2, x1:x2] = fill_value
-    return img_batch
+    if random_fill:
+        fill_value = (torch.randint(low=0, high=255, size=(y2-y1, x2-x1)) / 255 - mean).float() / std
+
+
+    img_batch_[:, :, y1:y2, x1:x2] = fill_value
+    return img_batch_
