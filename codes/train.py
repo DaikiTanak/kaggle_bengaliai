@@ -18,7 +18,7 @@ from model import (
     se_resnet152,
     densenet121,
     se_resnext101_32x8d,
-    se_resnext50_32x4d
+    se_resnext50_32x4d,
     )
 from functions import (
     load_train_df,
@@ -85,6 +85,8 @@ elif args.model == "resnext101":
     model = se_resnext101_32x8d(num_classes=2, multi_output=True).to(device)
 elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
+elif args.model == "inception_v3":
+    model = torchvision.models.inception_v3(pretrained=False, num_classes=11+168+7).to(device)
 else:
     raise ValueError()
 
@@ -113,6 +115,8 @@ else:
     print("Use original images.")
     imgs = np.asarray(imgs)
 
+
+    size = 139
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.Resize(size=(size, size), interpolation=2),
                                                  # torchvision.transforms.RandomRotation(degrees=5,),
@@ -206,7 +210,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
         model.train()
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
-            inputs = inputs[:, 0, :, :].unsqueeze(1)
+
+            if not args.model == "inception_v3":
+                inputs = inputs[:, 0, :, :].unsqueeze(1)
 
             # inputs: batchsize * 1 * h * w
 
@@ -235,7 +241,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 # compute output
                 inputs = inputs.to(device)
 
-                out1, out2, out3 = model(inputs)
+                out = model(inputs)
                 # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
                 loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
@@ -258,7 +264,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
                 inputs = inputs.to(device)
 
-                out1, out2, out3 = model(inputs)
+                out = model(inputs)
                 # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
                 loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
@@ -270,7 +276,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 max_h = int(128*args.cutout_size)
 
                 augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
-                out1, out2, out3 = model(augmented_iuputs)
+                out = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
@@ -278,7 +284,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             elif args.random_erasing and r < random_erasing_prob:
                 augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2).to(device)
 
-                out1, out2, out3 = model(augmented_iuputs)
+                out = model(augmented_iuputs)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
@@ -289,7 +295,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             else:
                 inputs = inputs.to(device)
 
-                out1, out2, out3 = model(inputs)
+                out = model(inputs)
                 # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
@@ -299,6 +305,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             # if args.weighted_loss:
             #     loss = loss1 + loss2*2 + loss3
             # else:
+
+            if not args.model == "inception_v3":
+                out1, out2, out3 = out
+            else:
+                out1 = out[:, :11]
+                out2 = out[:, 11:168+11]
+                out3 = out[:, 11+168:11+168+7]
+
             loss = loss1 + loss2 + loss3
 
             optimizer.zero_grad()
@@ -400,11 +414,13 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         if logger["val_loss"][-1] < val_best_loss:
             val_best_loss = logger["val_loss"][-1]
 
-            checkpoint = {"model":model.state_dict(),
-                          "oprimizer":optimizer.state_dict(),
-                          "epoch":epoch_idx,
-                          "val_best_loss":val_best_loss,
-                          "val_best_recall":val_best_recall}
+            checkpoint = {
+                "model":model.state_dict(),
+                "oprimizer":optimizer.state_dict(),
+                "epoch":epoch_idx,
+                "val_best_loss":val_best_loss,
+                "val_best_recall":val_best_recall
+                }
             torch.save(checkpoint, model_fn)
 
 

@@ -1,3 +1,4 @@
+from __future__ import division
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 import torch.nn.functional as F
@@ -1102,6 +1103,3 @@ class DPN(nn.Module):
             out = F.avg_pool2d(features, kernel_size=7).view(features.size(0), -1)
             out = self.classifier(out)
             return out, target_reweighted
-
-## WideResNet
-# https://github.com/xternalz/WideResNet-pytorch/blob/master/wideresnet.py
