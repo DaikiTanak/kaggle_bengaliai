@@ -262,7 +262,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 if not args.model in ["inception_v3","efficientnet_b7"]:
                     out1, out2, out3 = out
                 else:
-                    # out = out[0]
+                    if args.model == "inception_v3":
+                        out = out[0]
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
                     out3 = out[:, 11+168:11+168+7]
@@ -292,7 +293,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 if not args.model in ["inception_v3","efficientnet_b7"]:
                     out1, out2, out3 = out
                 else:
-                    # out = out[0]
+                    if args.model == "inception_v3":
+                        out = out[0]
 
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
@@ -312,7 +314,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 if not args.model in ["inception_v3","efficientnet_b7"]:
                     out1, out2, out3 = out
                 else:
-                    # out = out[0]
+                    if args.model == "inception_v3":
+                        out = out[0]
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
                     out3 = out[:, 11+168:11+168+7]
@@ -327,7 +330,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 if not args.model in ["inception_v3","efficientnet_b7"]:
                     out1, out2, out3 = out
                 else:
-                    # out = out[0]
+                    if args.model == "inception_v3":
+                        out = out[0]
 
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
