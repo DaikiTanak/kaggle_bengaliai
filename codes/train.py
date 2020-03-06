@@ -100,16 +100,14 @@ if not args.original:
     print("Use crop&resized images.")
 
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 # torchvision.transforms.RandomRotation(degrees=5,),
                                                  torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
+                                                 torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std,)])
 
     val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std)])
 
 else:
     print("Use original images.")

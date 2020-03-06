@@ -39,6 +39,8 @@ parser.add_argument("--sh", default=0.4, type=float, required=False)
 parser.add_argument("--r1", default=0.3, type=float, required=False)
 parser.add_argument("--r2", default=3.3, type=float, required=False)
 
+parser.add_argument("--crop_scale_min", default=0.3333, type=float, required=False)
+
 
 
 args = parser.parse_args()
