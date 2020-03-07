@@ -240,14 +240,15 @@ class ResNet(nn.Module):
             self.fc = nn.Linear(512 * block.expansion * widen_factor, num_classes)
         elif multi_output:
 
-            num_channels = 512*widen_factor
+            num_channels = 512*widen_factor* block.expansion
 
             # vowel
             self.vowel = nn.Sequential()
+            # self.vowel.add_module("relu1", nn.ReLU(True))
             self.vowel.add_module("bn1", nn.BatchNorm2d(num_channels))
             self.vowel.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.vowel.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.vowel.add_module("relu1", nn.ReLU(True))
+            self.vowel.add_module("relu2", nn.ReLU(True))
             # self.vowel.add_module("pool1", GeM(p=3))
             self.vowel.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_vowel = nn.Linear(num_channels, 11)
@@ -255,19 +256,21 @@ class ResNet(nn.Module):
 
             # grapheme_root
             self.root = nn.Sequential()
+            # self.root.add_module("relu1", nn.ReLU(True))
             self.root.add_module("bn1", nn.BatchNorm2d(num_channels))
             self.root.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.root.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.root.add_module("relu1", nn.ReLU(True))
+            self.root.add_module("relu2", nn.ReLU(True))
             self.root.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_root = nn.Linear(num_channels, 168)
 
             # consonant_diacritic
             self.consonant = nn.Sequential()
+            # self.consonant.add_module("relu1", nn.ReLU(True))
             self.consonant.add_module("bn1", nn.BatchNorm2d(num_channels))
             self.consonant.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.consonant.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.consonant.add_module("relu1", nn.ReLU(True))
+            self.consonant.add_module("relu2", nn.ReLU(True))
             self.consonant.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_consonant = nn.Linear(num_channels, 7)
 

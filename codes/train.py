@@ -88,6 +88,9 @@ if args.model == "resnet34":
 elif args.model == "bengali_resnet34":
     model = model_bengali.se_resnet34(num_classes=2, multi_output=True).to(device)
 
+elif args.model == "bengali_resnext50":
+    model = model_bengali.se_resnext50_32x4d(num_classes=2, multi_output=True).to(device)
+
 elif args.model == "resnet152":
     model = se_resnet152(num_classes=2, multi_output=True).to(device)
 elif args.model == "resnext50":
@@ -224,7 +227,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
     #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=5, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
 
     #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
     loss_fn = torch.nn.CrossEntropyLoss()
