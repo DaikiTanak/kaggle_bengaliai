@@ -13,6 +13,7 @@ import torchvision
 # from torchvision import transforms, utils
 
 from dataset import BengalImgDataset, load_pickle_images
+import model_bengali
 from model import (
     se_resnet34,
     se_resnet152,
@@ -84,6 +85,9 @@ efficientnets = ["efficientnet-b" + str(i) for i in range(8)]
 if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
     model = se_resnet34(num_classes=2, multi_output=True).to(device)
+elif args.model == "bengali_resnet34":
+    model = model_bengali.se_resnet34(num_classes=2, multi_output=True).to(device)
+
 elif args.model == "resnet152":
     model = se_resnet152(num_classes=2, multi_output=True).to(device)
 elif args.model == "resnext50":

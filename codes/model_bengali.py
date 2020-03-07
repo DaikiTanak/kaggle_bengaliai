@@ -38,27 +38,6 @@ def conv_init(m):
 
 
 
-# Shake-shake implementation from https://github.com/owruby/shake-shake_pytorch/blob/master/models/shakeshake.py
-class ShakeShake(torch.autograd.Function):
-
-    @staticmethod
-    def forward(ctx, x1, x2, training=True):
-
-        if training:
-            alpha = torch.FloatTensor(x1.size(0)).uniform_().to("cuda:1")
-            alpha = alpha.view(alpha.size(0), 1, 1, 1).expand_as(x1)
-        else:
-            alpha = 0.5
-        return alpha * x1 + (1 - alpha) * x2
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        beta = torch.FloatTensor(grad_output.size(0)).uniform_().to("cuda:1")
-        beta = beta.view(beta.size(0), 1, 1, 1).expand_as(grad_output)
-        # beta = Variable(beta)
-
-        return beta * grad_output, (1 - beta) * grad_output, None
-
 # SENet
 # https://github.com/moskomule/senet.pytorch/blob/master/senet/se_resnet.py
 class SELayer(nn.Module):
@@ -133,6 +112,21 @@ class SEBasicBlock(nn.Module):
         if not self.shake_shake:
 
             # bn - 3*3 conv - bn - relu - dropout - 3*3 conv - bn - add
+            # out = self.bn1(x)
+            # out = self.conv1(out)
+            # out = self.bn2(out)
+            # out = self.relu(out)
+            # out = self.drop(out)
+            # out = self.conv2(out)
+            # out = self.bn3(out)
+            # out = self.se(out)
+            # #######
+            # if self.downsample is not None:
+            #     residual = self.downsample(x)
+            # out += residual
+            # out = self.relu(out)
+
+            # bn - conv - bn - relu - conv - bn - add
             out = self.bn1(x)
             out = self.conv1(out)
             out = self.bn2(out)
@@ -145,7 +139,8 @@ class SEBasicBlock(nn.Module):
             if self.downsample is not None:
                 residual = self.downsample(x)
             out += residual
-            out = self.relu(out)
+            # out = self.relu(out)
+
 
         elif self.shake_shake:
             h1 = self.branch1(x)
@@ -187,6 +182,7 @@ class SEBottleneck(nn.Module):
         # bn - 1*1conv - bn - relu - 3*3conv - bn - relu - 1*1conv - bn
         # This architecture is proposed in Deep Pyramidal Residual Networks.
 
+
         out = self.bn1(x)
         out = self.conv1(out)
         out = self.bn2(out)
@@ -203,7 +199,7 @@ class SEBottleneck(nn.Module):
             residual = self.downsample(x)
 
         out += residual
-        out = self.relu(out)
+        # out = self.relu(out)
 
         return out
 
@@ -238,33 +234,41 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128*widen_factor, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256*widen_factor, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512*widen_factor, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if not multi_output:
             self.fc = nn.Linear(512 * block.expansion * widen_factor, num_classes)
         elif multi_output:
 
-            self.fc1 = nn.Sequential()
-            self.fc1.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-            self.fc1.add_module("relu1", nn.ReLU(True))
-            self.fc1.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 11))
+            num_channels = 512*widen_factor
+
+            # vowel
+            self.vowel = nn.Sequential()
+            self.vowel.add_module("bn1", nn.BatchNorm2d(num_channels))
+            self.vowel.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            self.vowel.add_module("bn2", nn.BatchNorm2d(num_channels))
+            self.vowel.add_module("relu1", nn.ReLU(True))
+            self.vowel.add_module("pool1", GeM(p=3))
+            self.fc_vowel = nn.Linear(num_channels, 11)
+
+
             # grapheme_root
-            self.fc2 = nn.Sequential()
-            self.fc2.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-            self.fc2.add_module("relu1", nn.ReLU(True))
-            self.fc2.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 168))
+            self.root = nn.Sequential()
+            self.root.add_module("bn1", nn.BatchNorm2d(num_channels))
+            self.root.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            self.root.add_module("bn2", nn.BatchNorm2d(num_channels))
+            self.root.add_module("relu1", nn.ReLU(True))
+            self.root.add_module("pool1", GeM(p=3))
+            self.fc_root = nn.Linear(num_channels, 168)
+
             # consonant_diacritic
-            self.fc3 = nn.Sequential()
-            self.fc3.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-            self.fc3.add_module("relu1", nn.ReLU(True))
-            self.fc3.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 7))
-
-
-            # self.fc_all = nn.Sequential()
-            # self.fc_all.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
-            # self.fc_all.add_module("relu1", nn.ReLU(True))
-            # self.fc_all.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 11+168+7))
-
+            self.consonant = nn.Sequential()
+            self.consonant.add_module("bn1", nn.BatchNorm2d(num_channels))
+            self.consonant.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            self.consonant.add_module("bn2", nn.BatchNorm2d(num_channels))
+            self.consonant.add_module("relu1", nn.ReLU(True))
+            self.consonant.add_module("pool1", GeM(p=3))
+            self.fc_consonant = nn.Linear(num_channels, 7)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -355,13 +359,13 @@ class ResNet(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
 
-        out = self.avgpool(out)
-        out = out.view(out.size(0), -1)
+        # out = self.avgpool(out)
+        # out = out.view(out.size(0), -1)
 
         if self.multi_output:
-            out1 = self.fc1(out)
-            out2 = self.fc2(out)
-            out3 = self.fc3(out)
+            out1 = self.fc_vowel(self.vowel(out).view(out.size(0), -1))
+            out2 = self.fc_root(self.root(out).view(out.size(0), -1))
+            out3 = self.fc_consonant(self.consonant(out).view(out.size(0), -1))
 
             # out = self.fc_all(out)
             # out1 = out[:, 11]
