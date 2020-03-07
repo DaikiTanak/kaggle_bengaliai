@@ -248,7 +248,8 @@ class ResNet(nn.Module):
             self.vowel.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.vowel.add_module("bn2", nn.BatchNorm2d(num_channels))
             self.vowel.add_module("relu1", nn.ReLU(True))
-            self.vowel.add_module("pool1", GeM(p=3))
+            # self.vowel.add_module("pool1", GeM(p=3))
+            self.vowel.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_vowel = nn.Linear(num_channels, 11)
 
 
@@ -258,7 +259,7 @@ class ResNet(nn.Module):
             self.root.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.root.add_module("bn2", nn.BatchNorm2d(num_channels))
             self.root.add_module("relu1", nn.ReLU(True))
-            self.root.add_module("pool1", GeM(p=3))
+            self.root.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_root = nn.Linear(num_channels, 168)
 
             # consonant_diacritic
@@ -267,7 +268,7 @@ class ResNet(nn.Module):
             self.consonant.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
             self.consonant.add_module("bn2", nn.BatchNorm2d(num_channels))
             self.consonant.add_module("relu1", nn.ReLU(True))
-            self.consonant.add_module("pool1", GeM(p=3))
+            self.consonant.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_consonant = nn.Linear(num_channels, 7)
 
         for m in self.modules():
@@ -1112,7 +1113,10 @@ class DPN(nn.Module):
 
 from torch.nn.parameter import Parameter
 def gem(x, p=3, eps=1e-6):
-    return F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1./p)
+    # x = x.to(torch.float32)
+    x = F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1./p)
+    return x
+
 class GeM(nn.Module):
     def __init__(self, p=3, eps=1e-6):
         super(GeM,self).__init__()
