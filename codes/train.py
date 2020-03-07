@@ -77,6 +77,10 @@ random_erasing_prob = 0.5
 print("Running device: ", device)
 print("batchsize: ", batchsize)
 
+efficientnet_name = ""
+
+efficientnets = ["efficientnet-b" + str(i) for i in range(8)]
+
 if args.model == "resnet34":
     # model = se_resnet34(num_classes=2).to(device)
     model = se_resnet34(num_classes=2, multi_output=True).to(device)
@@ -90,12 +94,17 @@ elif args.model == "densenet":
     model = densenet121(if_selayer=True).to(device)
 elif args.model == "inception_v3":
     model = torchvision.models.inception_v3(pretrained=False, num_classes=11+168+7).to(device)
-elif args.model == "efficientnet_b7":
+elif args.model in efficientnets:
     from efficientnet_pytorch import EfficientNet
 
-    model = EfficientNet.from_pretrained('efficientnet-b7', num_classes=11+168+7).to(device)
+    efficientnet_name = args.model
+    print("efficientnet:", efficientnet_name)
+
+    model = EfficientNet.from_pretrained(args.model, num_classes=11+168+7).to(device)
 else:
     raise ValueError()
+
+
 
 
 # train_all = load_train_df()
@@ -112,7 +121,7 @@ if not args.original:
 
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
-                                                 # torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
+                                                 torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
 
@@ -228,7 +237,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         model.train()
         for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
 
-            if not args.model in ["inception_v3","efficientnet_b7"]:
+            if not args.model in ["inception_v3",efficientnet_name]:
                 inputs = inputs[:, 0, :, :].unsqueeze(1)
 
             # inputs: batchsize * 1 * h * w
@@ -259,7 +268,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 inputs = inputs.to(device)
 
                 out = model(inputs)
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     if args.model == "inception_v3":
@@ -290,7 +299,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 inputs = inputs.to(device)
 
                 out = model(inputs)
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     if args.model == "inception_v3":
@@ -311,7 +320,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
                 augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
                 out = model(augmented_iuputs)
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     if args.model == "inception_v3":
@@ -327,7 +336,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2).to(device)
 
                 out = model(augmented_iuputs)
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     if args.model == "inception_v3":
@@ -349,7 +358,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 out = model(inputs)
                 # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
 
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     # out = out[0]
@@ -392,7 +401,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
 
 
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     inputs = inputs[:, 0, :, :].unsqueeze(1)
 
 
@@ -404,7 +413,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 labels2 = labels2.to(device)
                 labels3 = labels3.to(device)
 
-                if not args.model in ["inception_v3","efficientnet_b7"]:
+                if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3 = out
                 else:
                     out1 = out[:, :11]

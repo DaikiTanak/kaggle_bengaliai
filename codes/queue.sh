@@ -21,6 +21,6 @@
 # python train.py  --model resnext50 --name resnext50_shift.5_cutout.6_random_rotate11 --affine_rotate 11 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 172 --epoch 200
 # python train.py  --model resnet34 --name resnet34_shift.5_cutout.6_random_lrdrop.1 --lr_drop 0.1 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 500 --epoch 100
 
-python train.py --model resnet34 --name resnet34_stratified_scalescrop.666_rotate11 --crop_scale_min 0.666 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
 python train.py --model resnet34 --name resnet34_stratified_scalescrop.333_rotate11 --crop_scale_min 0.333 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
 python train.py --model resnet34 --name resnet34_stratified_scalescrop.1_rotate11 --crop_scale_min 0.1 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
+python train.py --model resnet34 --name resnet34_stratified_scalescrop.666_rotate11 --crop_scale_min 0.666 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
