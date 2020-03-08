@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
 import joblib
-
+import copy
 import slackweb
 
 import torch
@@ -515,20 +515,33 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         for k, v in logger.items():
             print(k, v[-1])
 
+        save_flag = False
         if logger["val_recall"][-1] > val_best_recall:
             val_best_recall = logger["val_recall"][-1]
+            model_recall = copy.deepcopy(model).state_dict()
+            optim_recall = copy.deepcopy(optimizer).state_dict()
+
+            save_flag = True
 
         if logger["val_loss"][-1] < val_best_loss:
             val_best_loss = logger["val_loss"][-1]
+            model_loss = copy.deepcopy(model).state_dict()
+            optim_loss = copy.deepcopy(optimizer).state_dict()
 
+            save_flag = True
+
+        if save_flag:
             checkpoint = {
-                "model":model.state_dict(),
-                "oprimizer":optimizer.state_dict(),
+                "model":model_loss,
+                "model_recall":model_recall,
+                "oprimizer":optim_loss,
+                "optimizer_recall":optim_recall,
                 "epoch":epoch_idx,
                 "val_best_loss":val_best_loss,
                 "val_best_recall":val_best_recall
                 }
             torch.save(checkpoint, model_fn)
+
 
 
         if epoch_idx % 1 == 0:
