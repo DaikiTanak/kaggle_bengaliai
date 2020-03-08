@@ -4,7 +4,7 @@ import torch
 from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 import os
-
+from collections import defaultdict
 
 from functions import load_train_df
 
@@ -15,7 +15,7 @@ class BengalImgDataset(Dataset):
     Construct dataset given images and labels.
     """
 
-    def __init__(self, images, vowel, grapheme, consonant, transform=None, test_dataset_flag=False):
+    def __init__(self, images, vowel, grapheme, consonant, component, transform=None, test_dataset_flag=False):
         """
         Params:
             images: numpy.array
@@ -26,6 +26,7 @@ class BengalImgDataset(Dataset):
         self.label1 = vowel
         self.label2 = grapheme
         self.label3 = consonant
+        self.component = component
 
         self.height = 137
         self.width = 236
@@ -40,13 +41,17 @@ class BengalImgDataset(Dataset):
         label1 = self.label1[idx]
         label2 = self.label2[idx]
         label3 = self.label3[idx]
+        compo = self.component[idx]
         image = self.images[idx]
+
+        compo_of = torch.zeros((62,))
+        for i in compo:
+            compo_of[int(i)] = 1
 
         if self.transform is not None:
             image = self.transform(image)
 
-        return (image,label1,label2,label3)
-
+        return (image,label1,label2,label3, compo_of)
 
 def pickle_images():
     # pickle images, labels
@@ -92,6 +97,69 @@ def load_pickle_images():
         all_consonant.extend(consonant_diacritic_label)
 
     return (all_images, all_vowel, all_grapheme, all_consonant)
+
+def label_to_components(vowels, roots, consonants):
+    """
+    return component label included in input images.
+    Params:
+        vowels: vowel labels
+        roots: root labels
+        consonants: consonant labels
+    """
+
+    assert len(vowels) == len(roots) == len(consonants)
+
+    class_map_df = pd.read_csv(os.path.join(data_folder, 'class_map.csv'))
+
+    # component to label dictionary.
+    compo_label = {}
+    i = 0
+    for idx, component in enumerate(class_map_df["component"].values):
+        component_list = list(component)
+        for c in component_list:
+            if not c in compo_label.keys():
+                compo_label[c] = i
+                i += 1
+
+    print("There is " + str(len(compo_label.keys())) + " component parts")
+
+
+    vowel_label_to_compo = defaultdict(list)
+    root_label_to_compo =  defaultdict(list)
+    consonant_label_to_compo =  defaultdict(list)
+
+    # root
+    for i in range(0, 168):
+        l = class_map_df["label"].values[i]
+        compo = class_map_df["component"].values[i]
+        assert class_map_df["component_type"].values[i] == "grapheme_root", "{} at {}".format(class_map_df["component_type"].values[i],i)
+        components = list(set(compo))
+        for c in components:
+            root_label_to_compo[l].append(compo_label[c])
+    #vowel
+    for i in range(168, 168+11):
+        l = class_map_df["label"].values[i]
+        compo = class_map_df["component"].values[i]
+        assert class_map_df["component_type"].values[i] == "vowel_diacritic", "{} at {}".format(class_map_df["component_type"].values[i],i)
+
+        components = list(set(compo))
+        for c in components:
+            vowel_label_to_compo[l].append(compo_label[c])
+
+    #conso
+    for i in range(168+11, 168+11+7):
+        l = class_map_df["label"].values[i]
+        compo = class_map_df["component"].values[i]
+        assert class_map_df["component_type"].values[i] == "consonant_diacritic", "{} at {}".format(class_map_df["component_type"].values[i],i)
+
+        components = list(set(compo))
+        for c in components:
+            consonant_label_to_compo[l].append(compo_label[c])
+
+    labels = []
+    for root, vowel, consonant in zip(roots, vowels, consonants):
+        labels.append(list(set(root_label_to_compo[root] + vowel_label_to_compo[vowel] + consonant_label_to_compo[consonant])))
+    return np.asarray(labels)
 
 
 import cv2

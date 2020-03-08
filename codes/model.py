@@ -259,6 +259,9 @@ class ResNet(nn.Module):
             self.fc3.add_module("relu1", nn.ReLU(True))
             self.fc3.add_module("fc2", nn.Linear(512 * block.expansion * widen_factor, 7))
 
+            self.component = nn.Sequential()
+            self.component.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 62))
+
 
             # self.fc_all = nn.Sequential()
             # self.fc_all.add_module("fc1", nn.Linear(512 * block.expansion * widen_factor, 512 * block.expansion * widen_factor))
@@ -363,6 +366,8 @@ class ResNet(nn.Module):
             out2 = self.fc2(out)
             out3 = self.fc3(out)
 
+            out_component = self.component(out)
+
             # out = self.fc_all(out)
             # out1 = out[:, 11]
             # out2 = out[:, 168]
@@ -370,7 +375,7 @@ class ResNet(nn.Module):
 
 
             if lam is None:
-                return out1, out2, out3
+                return out1, out2, out3, out_component
             else:
                 return out1, out2, out3, target_reweighted
 

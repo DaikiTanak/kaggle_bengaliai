@@ -244,6 +244,9 @@ class ResNet(nn.Module):
 
             num_channels = 512*widen_factor* block.expansion
 
+            # self.component = nn.Sequential()
+            # self.component.add_module("fc1", nn.Linear(num_channels, 7))
+
             # vowel
             self.vowel = nn.Sequential()
             # self.vowel.add_module("relu1", nn.ReLU(True))

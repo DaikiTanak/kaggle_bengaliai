@@ -12,7 +12,7 @@ import torch
 import torchvision
 # from torchvision import transforms, utils
 
-from dataset import BengalImgDataset, load_pickle_images
+from dataset import BengalImgDataset, load_pickle_images, label_to_components
 import model_bengali
 from model import (
     se_resnet34,
@@ -37,7 +37,7 @@ from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-debug = False
+debug = args.debug
 
 
 slack = slackweb.Slack(url="https://hooks.slack.com/services/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")
@@ -103,7 +103,6 @@ elif args.model == "inception_v3":
     model = torchvision.models.inception_v3(pretrained=False, num_classes=11+168+7).to(device)
 elif args.model in efficientnets:
     from efficientnet_pytorch import EfficientNet
-
     efficientnet_name = args.model
     print("efficientnet:", efficientnet_name)
 
@@ -164,6 +163,12 @@ if debug:
     consonants = consonants[:1000]
 
 
+if args.component_labels:
+    component_labels = label_to_components(vowels=vowels, roots=graphemes, consonants=consonants)
+else:
+    # dummy labels
+    component_labels = np.asarray([[0]] * len(vowels))
+
 print("#imgs: ", imgs.shape)
 # convert into 3-dim images
 imgs = np.tile(imgs, (1,1,1,3))
@@ -199,6 +204,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     train_consonants = consonants[train_idx]
     val_consonants = consonants[val_idx]
 
+    train_component = component_labels[train_idx]
+    val_component = component_labels[val_idx]
+
     model_fn = "../models/{}_fold{}.dat".format(args.name, fold_idx+1)
     result_hist_fn = "../result/{}_train_history_fold{}.png".format(args.name, fold_idx+1)
     logger_fn = "../result/{}_train_log_fold{}.dat".format(args.name, fold_idx+1)
@@ -213,12 +221,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                                      vowel=train_vowels,
                                      grapheme=train_graphemes,
                                      consonant=train_consonants,
+                                     component=train_component,
                                      transform=transforms)
 
     val_dataset = BengalImgDataset(images=val_imgs,
                                     vowel=val_vowels,
                                     grapheme=val_graphemes,
                                     consonant=val_consonants,
+                                    component=val_component,
                                     transform=val_transforms)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True, num_workers=6)
@@ -231,6 +241,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
     #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
     loss_fn = torch.nn.CrossEntropyLoss()
+    loss_compo = torch.nn.BCEWithLogitsLoss()
     # ----------------------------------------------------------------------------------------------------
 
     logger = defaultdict(list)
@@ -242,7 +253,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         epoch_logger = defaultdict(list)
 
         model.train()
-        for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(train_loader), total=len(train_loader)):
+        for idx, (inputs, labels1, labels2, labels3, component) in tqdm(enumerate(train_loader), total=len(train_loader)):
 
             if not args.model in ["inception_v3",efficientnet_name]:
                 inputs = inputs[:, 0, :, :].unsqueeze(1)
@@ -252,6 +263,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
             labels3 = labels3.to(device)
+            component = component.to(device)
 
             r = np.random.rand(1)
             if args.cutmix and r < cutmix_prob:
@@ -276,7 +288,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
                 out = model(inputs)
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     if args.model == "inception_v3":
                         out = out[0]
@@ -307,7 +319,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
                 out = model(inputs)
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     if args.model == "inception_v3":
                         out = out[0]
@@ -328,7 +340,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
                 out = model(augmented_iuputs)
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     if args.model == "inception_v3":
                         out = out[0]
@@ -339,12 +351,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
 
+
+
             elif args.random_erasing and r < random_erasing_prob:
                 augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2).to(device)
 
                 out = model(augmented_iuputs)
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     if args.model == "inception_v3":
                         out = out[0]
@@ -366,7 +380,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
 
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     # out = out[0]
                     out1 = out[:, :11]
@@ -377,12 +391,12 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
 
-            # weighted loss?
-            # if args.weighted_loss:
-            #     loss = loss1 + loss2*2 + loss3
-            # else:
-
             loss = loss1 + loss2 + loss3
+            if args.component_labels:
+                loss_component = loss_compo(out_component, component)
+                loss += loss_component
+                epoch_logger["train_loss_compo"].append(loss_component.item())
+
 
             optimizer.zero_grad()
             loss.backward()
@@ -405,7 +419,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         with torch.no_grad():
             model.eval()
 
-            for idx, (inputs, labels1, labels2, labels3) in tqdm(enumerate(val_loader), total=len(val_loader)):
+            for idx, (inputs, labels1, labels2, labels3, component) in tqdm(enumerate(val_loader), total=len(val_loader)):
 
 
                 if not args.model in ["inception_v3",efficientnet_name]:
@@ -419,9 +433,11 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 labels1 = labels1.to(device)
                 labels2 = labels2.to(device)
                 labels3 = labels3.to(device)
+                component = component.to(device)
+
 
                 if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3 = out
+                    out1, out2, out3, out_component = out
                 else:
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
@@ -431,6 +447,12 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 loss1 = loss_fn(out1, labels1)
                 loss2 = loss_fn(out2, labels2)
                 loss3 = loss_fn(out3, labels3)
+
+                if args.component_labels:
+                    loss_component = loss_compo(out_component, component)
+                    loss += loss_component
+                    epoch_logger["val_loss_compo"].append(loss_component.item())
+
 
                 epoch_logger["val_loss1"].append(loss1.item())
                 epoch_logger["val_loss2"].append(loss2.item())
@@ -460,6 +482,10 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         for loss_idx in range(1,4,1):
             logger["train_loss{}".format(loss_idx)].append(np.mean(epoch_logger["train_loss{}".format(loss_idx)]))
             logger["val_loss{}".format(loss_idx)].append(np.mean(epoch_logger["val_loss{}".format(loss_idx)]))
+
+        if args.component_labels:
+            logger["train_loss_compo"].append(np.mean(epoch_logger["train_loss_compo"]))
+            logger["val_loss_compo"].append(np.mean(epoch_logger["val_loss_compo"]))
 
         # save weighted loss
         train_losses = [logger["train_loss1"][-1],logger["train_loss2"][-1],logger["train_loss3"][-1]]

@@ -20,7 +20,10 @@
 # python train.py  --model resnext50 --name resnext50_shift.5_cutout.6_random_rotate11 --affine_rotate 11 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 172 --epoch 200
 # python train.py  --model resnet34 --name resnet34_shift.5_cutout.6_random_lrdrop.1 --lr_drop 0.1 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 500 --epoch 100
 
-python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.2 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.2
+python train.py --component_labels --batchsize 400 --name resnet34_component_cutout.6 --epoch 150 --model resnet34 --cutout --cutout_size 0.6
+python train.py --component_labels --batchsize 400 --name resnet34_component_cutout.2 --epoch 150 --model resnet34 --cutout --cutout_size 0.2
+python train.py --component_labels --batchsize 400 --name resnet34_component --epoch 150 --model resnet34
+# python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.2 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.2
 python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.4 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.4
 python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.6 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.6
 python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.8 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.8
