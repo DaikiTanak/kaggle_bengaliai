@@ -231,9 +231,11 @@ class ResNet(nn.Module):
         self.bn2 = nn.BatchNorm2d(64)
 
         self.layer1 = self._make_layer(block, 64*widen_factor, layers[0])
-        self.layer2 = self._make_layer(block, 128*widen_factor, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256*widen_factor, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512*widen_factor, layers[3], stride=2)
+        inplanes_after_layer1 = self.inplanes
+
+        # self.layer2 = self._make_layer(block, 128*widen_factor, layers[1], stride=2)
+        # self.layer3 = self._make_layer(block, 256*widen_factor, layers[2], stride=2)
+        # self.layer4 = self._make_layer(block, 512*widen_factor, layers[3], stride=2)
         # self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         if not multi_output:
@@ -245,32 +247,46 @@ class ResNet(nn.Module):
             # vowel
             self.vowel = nn.Sequential()
             # self.vowel.add_module("relu1", nn.ReLU(True))
-            self.vowel.add_module("bn1", nn.BatchNorm2d(num_channels))
-            self.vowel.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
-            self.vowel.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.vowel.add_module("relu2", nn.ReLU(True))
+            self.vowel.add_module("layer2", self._make_layer(block, 128*widen_factor, layers[1], stride=2))
+            self.vowel.add_module("layer3", self._make_layer(block, 256*widen_factor, layers[2], stride=2))
+            self.vowel.add_module("layer4", self._make_layer(block, 512*widen_factor, layers[3], stride=2))
+
+            # self.vowel.add_module("bn1", nn.BatchNorm2d(num_channels))
+            # self.vowel.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            # self.vowel.add_module("bn2", nn.BatchNorm2d(num_channels))
+            # self.vowel.add_module("relu2", nn.ReLU(True))
             # self.vowel.add_module("pool1", GeM(p=3))
             self.vowel.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_vowel = nn.Linear(num_channels, 11)
 
+            self.inplanes = inplanes_after_layer1
+
 
             # grapheme_root
             self.root = nn.Sequential()
+            self.root.add_module("layer2", self._make_layer(block, 128*widen_factor, layers[1], stride=2))
+            self.root.add_module("layer3", self._make_layer(block, 256*widen_factor, layers[2], stride=2))
+            self.root.add_module("layer4", self._make_layer(block, 512*widen_factor, layers[3], stride=2))
             # self.root.add_module("relu1", nn.ReLU(True))
-            self.root.add_module("bn1", nn.BatchNorm2d(num_channels))
-            self.root.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
-            self.root.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.root.add_module("relu2", nn.ReLU(True))
+            # self.root.add_module("bn1", nn.BatchNorm2d(num_channels))
+            # self.root.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            # self.root.add_module("bn2", nn.BatchNorm2d(num_channels))
+            # self.root.add_module("relu2", nn.ReLU(True))
             self.root.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_root = nn.Linear(num_channels, 168)
 
+            self.inplanes = inplanes_after_layer1
+
             # consonant_diacritic
             self.consonant = nn.Sequential()
+            self.consonant.add_module("layer2", self._make_layer(block, 128*widen_factor, layers[1], stride=2))
+            self.consonant.add_module("layer3", self._make_layer(block, 256*widen_factor, layers[2], stride=2))
+            self.consonant.add_module("layer4", self._make_layer(block, 512*widen_factor, layers[3], stride=2))
             # self.consonant.add_module("relu1", nn.ReLU(True))
-            self.consonant.add_module("bn1", nn.BatchNorm2d(num_channels))
-            self.consonant.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
-            self.consonant.add_module("bn2", nn.BatchNorm2d(num_channels))
-            self.consonant.add_module("relu2", nn.ReLU(True))
+            # self.consonant.add_module("bn1", nn.BatchNorm2d(num_channels))
+            # self.consonant.add_module("conv1", conv3x3(num_channels, num_channels, stride=1))
+            # self.consonant.add_module("bn2", nn.BatchNorm2d(num_channels))
+            # self.consonant.add_module("relu2", nn.ReLU(True))
             self.consonant.add_module("pool1", nn.AdaptiveAvgPool2d((1, 1)))
             self.fc_consonant = nn.Linear(num_channels, 7)
 
@@ -352,19 +368,6 @@ class ResNet(nn.Module):
             out = self.relu(out)
 
         out = self.layer1(out)
-        if lam is not None and self.mixup_hidden and layer_mix == 1:
-            out, target_reweighted = mixup_process(out, target_reweighted, lam)
-
-        out = self.layer2(out)
-        if lam is not None and self.mixup_hidden and layer_mix == 2:
-            out, target_reweighted = mixup_process(out, target_reweighted, lam)
-
-
-        out = self.layer3(out)
-        out = self.layer4(out)
-
-        # out = self.avgpool(out)
-        # out = out.view(out.size(0), -1)
 
         if self.multi_output:
             out1 = self.fc_vowel(self.vowel(out).view(out.size(0), -1))

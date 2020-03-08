@@ -145,7 +145,7 @@ class SEBasicBlock(nn.Module):
             if self.downsample is not None:
                 residual = self.downsample(x)
             out += residual
-            out = self.relu(out)
+            # out = self.relu(out)
 
         elif self.shake_shake:
             h1 = self.branch1(x)
@@ -155,7 +155,7 @@ class SEBasicBlock(nn.Module):
             if self.downsample is not None:
                 residual = self.downsample(x)
             out += residual
-            out = self.relu(out)
+            # out = self.relu(out)
 
         return out
 
@@ -203,7 +203,7 @@ class SEBottleneck(nn.Module):
             residual = self.downsample(x)
 
         out += residual
-        out = self.relu(out)
+        # out = self.relu(out)
 
         return out
 

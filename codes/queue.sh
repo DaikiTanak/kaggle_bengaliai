@@ -20,9 +20,10 @@
 # python train.py  --model resnext50 --name resnext50_shift.5_cutout.6_random_rotate11 --affine_rotate 11 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 172 --epoch 200
 # python train.py  --model resnet34 --name resnet34_shift.5_cutout.6_random_lrdrop.1 --lr_drop 0.1 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --batchsize 500 --epoch 100
 
-python train.py --model resnet34 --name resnet34_stratified_scalescrop.333_rotate11 --crop_scale_min 0.333 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
-python train.py --model resnet34 --name resnet34_stratified_scalescrop.1_rotate11 --crop_scale_min 0.1 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
-python train.py --model resnet34 --name resnet34_stratified_scalescrop.666_rotate11 --crop_scale_min 0.666 --affine_translate 0.0 --batchsize 500 --epoch 100 --affine_rotate 11 --affine_scale 0.0
+python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.2 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.2
+python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.4 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.4
+python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.6 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.6
+python train.py --model resnet34 --name resnet34_stratified_scalescrop.2_rotate11_cutout.8 --crop_scale_min 0.2 --affine_translate 0.0 --batchsize 500 --epoch 150 --affine_rotate 11 --affine_scale 0.0 --cutout --cutout_random --cutout_size 0.8
 
 
 # python train.py --model bengali_resnext50 --name bengali_resnext50_stratified_shift.5_cutout.6_random --batchsize 172 --epoch 150 --affine_translate 0.5 --cutout --cutout_random --cutout_size 0.6 --affine_rotate 11 --gpu 0
