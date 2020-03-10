@@ -108,7 +108,28 @@ def plot_train_history(history, figure_name):
 
 
 def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
-    rand_index = torch.randperm(img_batch.size()[0]).to(device)
+    """yielding random erased imgs
+
+    Args:
+        img_batch: torch.tensor
+        sl: minimum ratio of area of bbox
+        sh: maximum ratio of area of bbox
+        r1: minimum value of aspect ratio of bbox.
+        r2: maximum value of aspect ratio of bbox.
+        mean: mean value used in normalizing images
+        value: standard deviation value used in normalizing images
+
+    Targets:
+        image : augmented
+
+    Image types:
+        uint8, float32
+
+    Reference:
+    |  https://arxiv.org/pdf/1708.04896.pdf
+    """
+
+    rand_index = torch.randperm(img_batch.size()[0])
 
     labels1_a = labels1
     labels2_a = labels2
