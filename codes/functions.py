@@ -108,7 +108,7 @@ def plot_train_history(history, figure_name):
 
 
 def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
-    """yielding random erased imgs
+    """yielding cutmix augmented imgs
 
     Args:
         img_batch: torch.tensor
@@ -121,23 +121,12 @@ def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
 
     Targets:
         image : augmented
-
-    Image types:
-        uint8, float32
-
-    Reference:
-    |  https://arxiv.org/pdf/1708.04896.pdf
+        lambda : mixing ratio of image pairs
+        rand_index : mixing indexes
     """
 
     rand_index = torch.randperm(img_batch.size()[0])
 
-    labels1_a = labels1
-    labels2_a = labels2
-    labels3_a = labels3
-
-    labels1_b = labels1[rand_index]
-    labels2_b = labels2[rand_index]
-    labels3_b = labels3[rand_index]
 
     batchsize, channels, height, width = img_batch.size()
 
@@ -169,7 +158,7 @@ def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
     lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
 
 
-    return img_batch, lam
+    return img_batch, lam, rand_index
 
 def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.0818658566, std=0.22140448):
     """yielding random erased imgs

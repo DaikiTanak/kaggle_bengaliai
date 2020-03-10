@@ -287,7 +287,16 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 # # compute output
                 # inputs = inputs.to(device)
 
-                augmented, lam = cutmix_aug(inputs, args.sl, args.sh, args.r1, args.r2)
+                augmented, lam, rand_index = cutmix_aug(inputs, args.sl, args.sh, args.r1, args.r2)
+
+                labels1_a = labels1
+                labels2_a = labels2
+                labels3_a = labels3
+
+                labels1_b = labels1[rand_index]
+                labels2_b = labels2[rand_index]
+                labels3_b = labels3[rand_index]
+
 
                 out = model(augmented)
                 if not args.model in ["inception_v3",efficientnet_name]:
