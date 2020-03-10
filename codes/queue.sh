@@ -8,7 +8,7 @@
 # efficientnet-b4: 128
 
 
-python train.py --batchsize 400 --name resnet34_cutout.6_224 --cutout 0.6 --size 224 --epoch 120 --model resnet34 --patience 10 --batchsize  128
+python train.py --batchsize 125 --name resnet34_cutout.6_shift.5_224 --cutout_random --cutout --cutout_size 0.6 --affine_translate 0.5 --size 224 --epoch 120 --model resnet34 --patience 10
 python train.py --batchsize 400 --name resnet34_cutmix_s.2-.5_r.3-3.3 --epoch 120 --model resnet34 --cutmix --sl 0.2 --sh 0.5 --r1 0.3 --r2 3.3 --patience 10
 python train.py --batchsize 400 --name resnet34_cutmix_s.2-.5_r.25-4.0 --epoch 120 --model resnet34 --cutmix --sl 0.2 --sh 0.5 --r1 0.25 --r2 4.0 --patience 10
 
