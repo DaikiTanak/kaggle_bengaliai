@@ -297,6 +297,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 labels2_b = labels2[rand_index]
                 labels3_b = labels3[rand_index]
 
+                augmented = augmented.to(device)
 
                 out = model(augmented)
                 if not args.model in ["inception_v3",efficientnet_name]:
