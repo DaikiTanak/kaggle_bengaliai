@@ -107,6 +107,49 @@ def plot_train_history(history, figure_name):
     plt.close()
 
 
+def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
+    rand_index = torch.randperm(img_batch.size()[0]).to(device)
+
+    labels1_a = labels1
+    labels2_a = labels2
+    labels3_a = labels3
+
+    labels1_b = labels1[rand_index]
+    labels2_b = labels2[rand_index]
+    labels3_b = labels3[rand_index]
+
+    batchsize, channels, height, width = img_batch.size()
+
+    S = height * width
+
+
+    # sample box center from uniform dist.
+    x = np.random.randint(low=0, high=width)
+    y = np.random.randint(low=0, high=height)
+
+    # sampling bbox area and bbox aspect ratio from uniform dist.
+    Se = np.random.uniform(sl, sh) * S
+    # re = np.random.uniform(r1, r2)
+
+    re = (np.random.beta(0.5, 0.5) * (r2 - r1)) + r1
+
+
+    # box height and width
+    box_h = int(np.sqrt(Se * re))
+    box_w = int(np.sqrt(Se / re))
+
+    y1 = np.clip(y - box_h // 2, 0, height)
+    y2 = np.clip(y1 + box_h, 0, height)
+    x1 = np.clip(x - box_w // 2, 0, width)
+    x2 = np.clip(x1 + box_w, 0, width)
+
+    img_batch[:, :, bbx1:bbx2, bby1:bby2] = img_batch[rand_index, :, bbx1:bbx2, bby1:bby2]
+
+    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
+
+
+    return img_batch, lam
+
 def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.0818658566, std=0.22140448):
     """yielding random erased imgs
 
@@ -144,10 +187,6 @@ def random_erasing_aug(img_batch, sl=0.02, sh=0.4, r1=0.3, r2=3.3, mean=0.081865
     # box height and width
     box_h = int(np.sqrt(Se * re))
     box_w = int(np.sqrt(Se / re))
-
-    # sample box center from uniform dist.
-    x = np.random.randint(low=0, high=width)
-    y = np.random.randint(low=0, high=height)
 
     y1 = np.clip(y - box_h // 2, 0, height)
     y2 = np.clip(y1 + box_h, 0, height)

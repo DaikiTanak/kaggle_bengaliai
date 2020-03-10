@@ -27,6 +27,7 @@ from functions import (
     calc_hierarchical_macro_recall,
     cutout_aug,
     random_erasing_aug,
+    cutmix_aug
     )
 from config import args
 
@@ -49,7 +50,7 @@ def rand_bbox(size, lam):
     cut_w = np.int(W * cut_rat)
     cut_h = np.int(H * cut_rat)
 
-    # uniform
+    # smaple bbox center point from uniform dist.
     cx = np.random.randint(W)
     cy = np.random.randint(H)
 
@@ -70,7 +71,7 @@ device = "cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
 size = 128
-cutmix_prob = 0.1
+cutmix_prob = 0.5
 mixup_prob = 0.1
 cutout_prob = 0.5
 random_erasing_prob = 0.5
@@ -269,24 +270,26 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             if args.cutmix and r < cutmix_prob:
                 #beta = .1
 
-                lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
-                rand_index = torch.randperm(inputs.size()[0]).to(device)
-                labels1_a = labels1
-                labels2_a = labels2
-                labels3_a = labels3
+                # lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
+                # rand_index = torch.randperm(inputs.size()[0]).to(device)
+                # labels1_a = labels1
+                # labels2_a = labels2
+                # labels3_a = labels3
+                #
+                # labels1_b = labels1[rand_index]
+                # labels2_b = labels2[rand_index]
+                # labels3_b = labels3[rand_index]
+                #
+                # bbx1, bby1, bbx2, bby2 = rand_bbox(inputs.size(), lam)
+                # inputs[:, :, bbx1:bbx2, bby1:bby2] = inputs[rand_index, :, bbx1:bbx2, bby1:bby2]
+                # # adjust lambda to exactly match pixel ratio
+                # lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
+                # # compute output
+                # inputs = inputs.to(device)
 
-                labels1_b = labels1[rand_index]
-                labels2_b = labels2[rand_index]
-                labels3_b = labels3[rand_index]
+                augmented, lam = cutmix_aug(inputs, args.sl, args.sh, args.r1, args.r2)
 
-                bbx1, bby1, bbx2, bby2 = rand_bbox(inputs.size(), lam)
-                inputs[:, :, bbx1:bbx2, bby1:bby2] = inputs[rand_index, :, bbx1:bbx2, bby1:bby2]
-                # adjust lambda to exactly match pixel ratio
-                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
-                # compute output
-                inputs = inputs.to(device)
-
-                out = model(inputs)
+                out = model(augmented)
                 if not args.model in ["inception_v3",efficientnet_name]:
                     out1, out2, out3, out_component = out
                 else:
