@@ -155,7 +155,7 @@ def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
 
     img_batch[:, :, x1:x2, y1:y2] = img_batch[rand_index, :, x1:x2, y1:y2]
 
-    lam = 1 - ((x2 - x1) * (y2 - y1) / (inputs.size()[-1] * inputs.size()[-2]))
+    lam = 1 - ((x2 - x1) * (y2 - y1) / (img_batch.size()[-1] * img_batch.size()[-2]))
 
 
     return img_batch, lam, rand_index
