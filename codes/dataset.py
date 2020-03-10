@@ -48,6 +48,8 @@ class BengalImgDataset(Dataset):
         for i in compo:
             compo_of[int(i)] = 1
 
+        image = np.tile(imgs, (1,1,3))
+
         if self.transform is not None:
             image = self.transform(image)
 

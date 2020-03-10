@@ -173,9 +173,9 @@ else:
 
 print("#imgs: ", imgs.shape)
 # convert into 3-dim images
-imgs = np.tile(imgs, (1,1,1,3))
+# imgs = np.tile(imgs, (1,1,1,3))
 # imgs = imgs[:,:,:,0]
-print("#tiled imgs: ", imgs.shape)
+# print("#tiled imgs: ", imgs.shape)
 
 # train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
 #                                                                                                                                     test_size=0.2,
