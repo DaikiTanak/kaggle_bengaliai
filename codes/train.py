@@ -518,13 +518,6 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
         scheduler.step(logger["val_loss"][-1])
 
-
-        slack.notify(text="{} fold:{} Epoch:{} train loss:{} val loss:{} train recall:{} val recall{}".format(args.name, fold_idx+1, epoch_idx,
-                                                                                                            round(logger["train_loss"][-1], 3),
-                                                                                                            round(logger["val_loss"][-1], 3),
-                                                                                                            round(logger["train_recall"][-1], 3),
-                                                                                                            round(logger["val_recall"][-1], 3)))
-
         for k, v in logger.items():
             print(k, v[-1])
 
@@ -554,6 +547,13 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 "val_best_recall":val_best_recall
                 }
             torch.save(checkpoint, model_fn)
+
+        slack.notify(text="{} fold:{} Epoch:{} train loss:{} val loss:{} train recall:{} val recall{} best{}".format(args.name, fold_idx+1, epoch_idx,
+                                                                                                            round(logger["train_loss"][-1], 3),
+                                                                                                            round(logger["val_loss"][-1], 3),
+                                                                                                            round(logger["train_recall"][-1], 3),
+                                                                                                            round(logger["val_recall"][-1], 3),
+                                                                                                            round(val_best_recall, 3)))
 
 
 
