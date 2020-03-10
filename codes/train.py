@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 import joblib
 import copy
 import slackweb
+import cv2
 
 import torch
 import torchvision
@@ -70,7 +71,7 @@ lr = args.lr
 device = "cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu"
 height = 137
 width = 236
-size = 128
+size = args.size
 cutmix_prob = 0.5
 mixup_prob = 0.1
 cutout_prob = 0.5
@@ -122,13 +123,13 @@ imgs, vowels, graphemes, consonants = load_pickle_images()
 mean = 0.0818658566
 std = 0.22140448
 if not args.original:
-    imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs.pkl")))
+    imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs_{}.pkl".format(size))))
 
-    print("Use crop&resized images.")
+    print("Use crop&resized images of size:", size)
 
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
-                                                 torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
+                                                 # torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
 
@@ -139,12 +140,11 @@ if not args.original:
 else:
     print("Use original images.")
     imgs = np.asarray(imgs)
+    size = 224
 
-
-    size = 299
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.Resize(size=(size, size), interpolation=2),
-                                                 # torchvision.transforms.RandomRotation(degrees=5,),
+                                                 # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
                                                  torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
@@ -152,6 +152,7 @@ else:
 
     val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                 torchvision.transforms.Resize(size=(size, size), interpolation=2),
+                                                # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                                  # torchvision.transforms.Normalize(mean,std)])
