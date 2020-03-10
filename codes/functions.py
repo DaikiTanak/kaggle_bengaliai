@@ -153,9 +153,9 @@ def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
     x1 = np.clip(x - box_w // 2, 0, width)
     x2 = np.clip(x1 + box_w, 0, width)
 
-    img_batch[:, :, bbx1:bbx2, bby1:bby2] = img_batch[rand_index, :, bbx1:bbx2, bby1:bby2]
+    img_batch[:, :, x1:x2, y1:y2] = img_batch[rand_index, :, x1:x2, y1:y2]
 
-    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
+    lam = 1 - ((x2 - x1) * (y2 - y1) / (inputs.size()[-1] * inputs.size()[-2]))
 
 
     return img_batch, lam, rand_index
