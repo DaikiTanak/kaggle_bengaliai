@@ -89,10 +89,8 @@ if args.model == "resnet34":
     model = se_resnet34(num_classes=2, multi_output=True).to(device)
 elif args.model == "bengali_resnet34":
     model = model_bengali.se_resnet34(num_classes=2, multi_output=True).to(device)
-
 elif args.model == "bengali_resnext50":
     model = model_bengali.se_resnext50_32x4d(num_classes=2, multi_output=True).to(device)
-
 elif args.model == "resnet152":
     model = se_resnet152(num_classes=2, multi_output=True).to(device)
 elif args.model == "resnext50":
@@ -140,7 +138,6 @@ if not args.original:
 else:
     print("Use original images.")
     imgs = np.asarray(imgs)
-    size = 224
 
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                                  torchvision.transforms.Resize(size=(size, size), interpolation=2),
@@ -159,6 +156,7 @@ else:
 
 
 if debug:
+    # test on small dataset
     imgs = imgs[:1000]
     vowels = vowels[:1000]
     graphemes = graphemes[:1000]
@@ -172,10 +170,7 @@ else:
     component_labels = np.asarray([[0]] * len(vowels))
 
 print("#imgs: ", imgs.shape)
-# convert into 3-dim images
-# imgs = np.tile(imgs, (1,1,1,3))
-# imgs = imgs[:,:,:,0]
-# print("#tiled imgs: ", imgs.shape)
+
 
 # train_imgs, val_imgs, train_vowels, val_vowels, train_graphemes, val_graphemes, train_consonants, val_consonants = train_test_split(imgs, vowels, graphemes, consonants,
 #                                                                                                                                     test_size=0.2,
@@ -269,24 +264,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
             r = np.random.rand(1)
             if args.cutmix and r < cutmix_prob:
-                #beta = .1
-
                 # lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
-                # rand_index = torch.randperm(inputs.size()[0]).to(device)
-                # labels1_a = labels1
-                # labels2_a = labels2
-                # labels3_a = labels3
-                #
-                # labels1_b = labels1[rand_index]
-                # labels2_b = labels2[rand_index]
-                # labels3_b = labels3[rand_index]
-                #
-                # bbx1, bby1, bbx2, bby2 = rand_bbox(inputs.size(), lam)
-                # inputs[:, :, bbx1:bbx2, bby1:bby2] = inputs[rand_index, :, bbx1:bbx2, bby1:bby2]
-                # # adjust lambda to exactly match pixel ratio
-                # lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
-                # # compute output
-                # inputs = inputs.to(device)
 
                 augmented, lam, rand_index = cutmix_aug(inputs, args.sl, args.sh, args.r1, args.r2)
 
@@ -309,7 +287,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                     out1 = out[:, :11]
                     out2 = out[:, 11:168+11]
                     out3 = out[:, 11+168:11+168+7]
-                # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
                 loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
                 loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)

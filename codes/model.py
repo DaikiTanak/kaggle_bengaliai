@@ -59,7 +59,7 @@ class ShakeShake(torch.autograd.Function):
 
         return beta * grad_output, (1 - beta) * grad_output, None
 
-# SENet
+# SElayer
 # https://github.com/moskomule/senet.pytorch/blob/master/senet/se_resnet.py
 class SELayer(nn.Module):
     def __init__(self, channel, reduction=16):
@@ -71,7 +71,6 @@ class SELayer(nn.Module):
             nn.Linear(int(channel // reduction), channel, bias=False),
             nn.Sigmoid()
         )
-
     def forward(self, x):
         b, c, _, _ = x.size()
         y = self.avg_pool(x).view(b, c)
@@ -80,6 +79,7 @@ class SELayer(nn.Module):
         return x * y.expand_as(x)
 
 class SEBasicBlock(nn.Module):
+    # residual layer with se layer on top.
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False, device="cuda:0", groups=1, base_width=64,):
@@ -114,7 +114,6 @@ class SEBasicBlock(nn.Module):
 
 
     def _make_branch(self, inplanes, planes, stride=1):
-        # bn - 3*3 conv - bn - relu - dropout - 3*3 conv - bn - add
         return nn.Sequential(
                 nn.BatchNorm2d(inplanes),
                 conv3x3(inplanes, planes, stride),
@@ -160,6 +159,7 @@ class SEBasicBlock(nn.Module):
         return out
 
 class SEBottleneck(nn.Module):
+    # bottleneck block for resnet with a se-layer on top.
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16, shake_shake=False, groups=1, base_width=64,):
@@ -462,11 +462,6 @@ def se_resnext101_32x8d(num_classes, if_mixup=False, if_shake_shake=False, first
     groups = 32
     width_per_group = 8
     return ResNet(SEBottleneck, [3, 4, 23, 3], groups=groups, width_per_group=width_per_group, num_classes=num_classes, mixup_hidden=if_mixup, shake_shake=if_shake_shake, multi_output=multi_output)
-
-
-
-
-
 
 
 
