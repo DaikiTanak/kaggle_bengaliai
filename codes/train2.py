@@ -8,20 +8,14 @@ import joblib
 import copy
 import slackweb
 import cv2
+import pretrainedmodels
 
 import torch
 import torchvision
 # from torchvision import transforms, utils
 
 from dataset import BengalImgDataset, load_pickle_images, label_to_components
-import model_bengali
-from model import (
-    se_resnet34,
-    se_resnet152,
-    densenet121,
-    se_resnext101_32x8d,
-    se_resnext50_32x4d,
-    )
+
 from functions import (
     load_train_df,
     plot_train_history,
@@ -84,33 +78,34 @@ efficientnet_name = ""
 
 efficientnets = ["efficientnet-b" + str(i) for i in range(8)]
 
-if args.model == "resnet34":
-    # model = se_resnet34(num_classes=2).to(device)
-    model = se_resnet34(num_classes=2, multi_output=True).to(device)
-elif args.model == "bengali_resnet34":
-    model = model_bengali.se_resnet34(num_classes=2, multi_output=True).to(device)
-elif args.model == "bengali_resnext50":
-    model = model_bengali.se_resnext50_32x4d(num_classes=2, multi_output=True).to(device)
-elif args.model == "resnet152":
-    model = se_resnet152(num_classes=2, multi_output=True).to(device)
-elif args.model == "resnext50":
-    model = se_resnext50_32x4d(num_classes=2, multi_output=True).to(device)
-elif args.model == "resnext101":
-    model = se_resnext101_32x8d(num_classes=2, multi_output=True).to(device)
-elif args.model == "densenet":
-    model = densenet121(if_selayer=True).to(device)
-elif args.model == "inception_v3":
-    model = torchvision.models.inception_v3(pretrained=False, num_classes=11+168+7).to(device)
-elif args.model in efficientnets:
-    from efficientnet_pytorch import EfficientNet
-    efficientnet_name = args.model
-    print("efficientnet:", efficientnet_name)
+class PretrainedWrapper(torch.nn.Module):
+    """
+    wrapping pretrained model
+    """
 
-    model = EfficientNet.from_pretrained(args.model, num_classes=11+168+7).to(device)
+
+    # wrapped model: https://github.com/Cadene/pretrained-models.pytorch
+    def __init__(self, wrapped_model, num_classes=11+168+7):
+        super().__init__()
+        self.model = wrapped_model
+        self.num_classes = num_classes
+
+        dim_feats = self.model.last_linear.in_features
+        self.model.last_linear = torch.nn.Linear(dim_feats, num_classes)
+
+    def forward(self, x):
+        return self.model(x)
+
+
+
+if args.model == "resnext50":
+    base_model = pretrainedmodels.se_resnext50_32x4d(num_classes=1000, pretrained='imagenet')
+    print("model input:", base_model.input_size)
+    model = PretrainedWrapper(wrapped_model=base_model, num_classes=11+168+7).to(device)
+    # model = pretrainedmodels.se_resnext50_32x4d(num_classes=11+168+7, pretrained=False).to(device)
+
 else:
     raise ValueError()
-
-
 
 
 # train_all = load_train_df()
@@ -120,46 +115,25 @@ imgs, vowels, graphemes, consonants = load_pickle_images()
 
 mean = 0.0818658566
 std = 0.22140448
-if not args.original:
-    imgs = np.asarray(pd.read_pickle(os.path.join(data_folder, "cropped_imgs_{}.pkl".format(size))))
 
-    print("Use crop&resized images of size:", size)
+print("Use original images.")
+imgs = np.asarray(imgs)
+resized = []
+for idx, img in enumerate(imgs):
+    img = img[:,:,0]
+    img_ = cv2.resize(img, (size,size), interpolation=cv2.INTER_AREA).reshape(size,size,1)
+    resized.append(img_)
 
-    transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
-                                                 # torchvision.transforms.RandomResizedCrop(size=(128,128), scale=(args.crop_scale_min, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=2),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+imgs = np.asarray(resized)
 
-    val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                          torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                             # torchvision.transforms.Normalize(mean,std,)])
 
-else:
-    print("Use original images.")
-    imgs = np.asarray(imgs)
-    resized = []
-    for idx, img in enumerate(imgs):
-        img = img[:,:,0]
-        img_ = cv2.resize(img, (size,size), interpolation=cv2.INTER_AREA).reshape(size,size,1)
-        resized.append(img_)
-
-    imgs = np.asarray(resized)
-
-    transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 # torchvision.transforms.Resize(size=(size, size), interpolation=2),
-                                                 # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
-                                                 # torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std,)])
-
-    val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                # torchvision.transforms.Resize(size=(size, size), interpolation=2),
-                                                # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
-                                                 torchvision.transforms.ToTensor(),
-                                                 torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
-                                                 # torchvision.transforms.Normalize(mean,std)])
+val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
+                                             torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
 
 
 if debug:
@@ -238,6 +212,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchsize, shuffle=True, num_workers=6)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchsize, shuffle=False, num_workers=6)
 
+
     if args.optim == "adam":
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     elif args.optim == "sgd":
@@ -247,11 +222,10 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
     #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
     loss_fn = torch.nn.CrossEntropyLoss()
-    loss_compo = torch.nn.BCEWithLogitsLoss()
     # ----------------------------------------------------------------------------------------------------
 
     logger = defaultdict(list)
-    val_best_loss = 1e+10
+    val_best_loss = 1e+100
     val_best_recall = 0
 
     for epoch_idx in range(1, epoch_num+1, 1):
@@ -261,10 +235,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         model.train()
         for idx, (inputs, labels1, labels2, labels3, component) in tqdm(enumerate(train_loader), total=len(train_loader)):
 
-            if not args.model in ["inception_v3",efficientnet_name]:
-                inputs = inputs[:, 0, :, :].unsqueeze(1)
-
-            # inputs: batchsize * 1 * h * w
+            # inputs: batchsize * 3 * h * w
 
             labels1 = labels1.to(device)
             labels2 = labels2.to(device)
@@ -272,37 +243,24 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             component = component.to(device)
 
             r = np.random.rand(1)
-            if args.cutmix and r < cutmix_prob:
-                # lam = np.random.beta(args.cutmix_alpha, args.cutmix_alpha)
+            if r < 0.5:
+                # cutout
+                lam = np.random.beta(1, 1)
+                max_w = int(128*args.cutout_size)
+                max_h = int(128*args.cutout_size)
 
-                augmented, lam, rand_index = cutmix_aug(inputs, args.sl, args.sh, args.r1, args.r2)
+                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
+                out = model(augmented_iuputs)
 
-                labels1_a = labels1
-                labels2_a = labels2
-                labels3_a = labels3
+                out1 = out[:, :11]
+                out2 = out[:, 11:168+11]
+                out3 = out[:, 11+168:11+168+7]
+                loss1 = loss_fn(out1, labels1)
+                loss2 = loss_fn(out2, labels2)
+                loss3 = loss_fn(out3, labels3)
 
-                labels1_b = labels1[rand_index]
-                labels2_b = labels2[rand_index]
-                labels3_b = labels3[rand_index]
-
-                augmented = augmented.to(device)
-
-                out = model(augmented)
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    if args.model == "inception_v3":
-                        out = out[0]
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
-
-                loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
-                loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
-                loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
-
-
-            elif args.mixup and r < mixup_prob:
+            else:
+                # mixup
                 lam = np.random.beta(args.mixup_alpha, args.mixup_alpha)
                 rand_index = torch.randperm(inputs.size()[0]).to(device)
 
@@ -319,85 +277,17 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 inputs = inputs.to(device)
 
                 out = model(inputs)
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    if args.model == "inception_v3":
-                        out = out[0]
 
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
+                out1 = out[:, :11]
+                out2 = out[:, 11:168+11]
+                out3 = out[:, 11+168:11+168+7]
                 # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
                 loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
                 loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
                 loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
 
-            elif args.cutout and r < cutout_prob:
-                lam = np.random.beta(1, 1)
-                max_w = int(128*args.cutout_size)
-                max_h = int(128*args.cutout_size)
-
-                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
-                out = model(augmented_iuputs)
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    if args.model == "inception_v3":
-                        out = out[0]
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
-                loss1 = loss_fn(out1, labels1)
-                loss2 = loss_fn(out2, labels2)
-                loss3 = loss_fn(out3, labels3)
-
-
-
-            elif args.random_erasing and r < random_erasing_prob:
-                augmented_iuputs = random_erasing_aug(inputs, sl=args.sl, sh=args.sh, r1=args.r1, r2=args.r2).to(device)
-
-                out = model(augmented_iuputs)
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    if args.model == "inception_v3":
-                        out = out[0]
-
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
-                loss1 = loss_fn(out1, labels1)
-                loss2 = loss_fn(out2, labels2)
-                loss3 = loss_fn(out3, labels3)
-
-            elif args.augmix:
-                pass
-
-            else:
-                inputs = inputs.to(device)
-
-                out = model(inputs)
-                # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
-
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    # out = out[0]
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
-
-                loss1 = loss_fn(out1, labels1)
-                loss2 = loss_fn(out2, labels2)
-                loss3 = loss_fn(out3, labels3)
 
             loss = loss1 + loss2 + loss3
-            if args.component_labels:
-                loss_component = loss_compo(out_component, component)
-                loss += loss_component
-                epoch_logger["train_loss_compo"].append(loss_component.item())
-
 
             optimizer.zero_grad()
             loss.backward()
@@ -423,10 +313,6 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             for idx, (inputs, labels1, labels2, labels3, component) in tqdm(enumerate(val_loader), total=len(val_loader)):
 
 
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    inputs = inputs[:, 0, :, :].unsqueeze(1)
-
-
                 inputs = inputs.to(device)
 
                 out = model(inputs)
@@ -436,13 +322,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
                 labels3 = labels3.to(device)
                 component = component.to(device)
 
-
-                if not args.model in ["inception_v3",efficientnet_name]:
-                    out1, out2, out3, out_component = out
-                else:
-                    out1 = out[:, :11]
-                    out2 = out[:, 11:168+11]
-                    out3 = out[:, 11+168:11+168+7]
+                out1 = out[:, :11]
+                out2 = out[:, 11:168+11]
+                out3 = out[:, 11+168:11+168+7]
 
                 # loss = loss_fn(out1, labels1) + loss_fn(out2, labels2) + loss_fn(out3, labels3)
                 loss1 = loss_fn(out1, labels1)
@@ -510,14 +392,14 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             print(k, v[-1])
 
         save_flag = False
-        if logger["val_recall"][-1] > val_best_recall:
+        if logger["val_recall"][-1] > val_best_recall or epoch_idx == 1:
             val_best_recall = logger["val_recall"][-1]
             model_recall = copy.deepcopy(model).state_dict()
             optim_recall = copy.deepcopy(optimizer).state_dict()
 
             save_flag = True
 
-        if logger["val_loss"][-1] < val_best_loss:
+        if logger["val_loss"][-1] < val_best_loss or epoch_idx == 1:
             val_best_loss = logger["val_loss"][-1]
             model_loss = copy.deepcopy(model).state_dict()
             optim_loss = copy.deepcopy(optimizer).state_dict()

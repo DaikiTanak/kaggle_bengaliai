@@ -45,6 +45,7 @@ parser.add_argument("--crop_scale_min", default=1.0, type=float, required=False)
 
 parser.add_argument('--patience', default=5, type=int, required=False)
 parser.add_argument('--size', default=128, type=int, required=False)
+parser.add_argument("--optim", default="sgd", type=str, required=False)
 
 
 args = parser.parse_args()
