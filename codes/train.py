@@ -138,17 +138,24 @@ if not args.original:
 else:
     print("Use original images.")
     imgs = np.asarray(imgs)
+    resized = []
+    for idx, img in enumerate(imgs):
+        img = img[:,:,0]
+        img_ = cv2.resize(img, (size,size), interpolation=cv2.INTER_AREA).reshape(size,size,1)
+        resized.append(img_)
+
+    imgs = np.asarray(resized)
 
     transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                 torchvision.transforms.Resize(size=(size, size), interpolation=2),
+                                                 # torchvision.transforms.Resize(size=(size, size), interpolation=2),
                                                  # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
-                                                 torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
+                                                 # torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(1-args.affine_scale, 1+args.affine_scale), shear=None, resample=False, fillcolor=0),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                                  # torchvision.transforms.Normalize(mean,std,)])
 
     val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                                torchvision.transforms.Resize(size=(size, size), interpolation=2),
+                                                # torchvision.transforms.Resize(size=(size, size), interpolation=2),
                                                 # torchvision.transforms.Resize(size=(size, size), interpolation=cv2.INTER_AREA),
                                                  torchvision.transforms.ToTensor(),
                                                  torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
