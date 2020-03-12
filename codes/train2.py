@@ -113,8 +113,8 @@ imgs, vowels, graphemes, consonants = load_pickle_images()
 
 
 
-mean = 0.0818658566
-std = 0.22140448
+mean = 241.52097741088866/255
+std = 41.02520206476833/255
 
 print("Use original images.")
 imgs = np.asarray(imgs)
@@ -125,6 +125,14 @@ for idx, img in enumerate(imgs):
     resized.append(img_)
 
 imgs = np.asarray(resized)
+
+# calc mean, std
+# pixels = []
+# for img in imgs[:10000]:
+#     pixels.extend(img[:,:,0].flatten())
+# print("MEAN:", np.mean(pixels))
+# print("STD:", np.std(pixels))
+# input()
 
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
                                           torchvision.transforms.ToTensor(),
@@ -218,8 +226,8 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     elif args.optim == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
     #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
-
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=1e-6)
     #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
     loss_fn = torch.nn.CrossEntropyLoss()
     # ----------------------------------------------------------------------------------------------------
@@ -244,47 +252,50 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
 
             r = np.random.rand(1)
             if r < 0.5:
-                # cutout
+                # cutmix or cutout
                 lam = np.random.beta(1, 1)
                 max_w = int(128*args.cutout_size)
                 max_h = int(128*args.cutout_size)
 
-                augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
-                out = model(augmented_iuputs)
+                # augmented_iuputs = cutout_aug(inputs, max_w, max_h, random_fill=args.cutout_random).to(device)
+                iuputs, lam, rand_index = cutmix_aug(inputs)
 
-                out1 = out[:, :11]
-                out2 = out[:, 11:168+11]
-                out3 = out[:, 11+168:11+168+7]
-                loss1 = loss_fn(out1, labels1)
-                loss2 = loss_fn(out2, labels2)
-                loss3 = loss_fn(out3, labels3)
+                # followings for cutout
+                # out = model(augmented_iuputs)
+                #
+                # out1 = out[:, :11]
+                # out2 = out[:, 11:168+11]
+                # out3 = out[:, 11+168:11+168+7]
+                # loss1 = loss_fn(out1, labels1)
+                # loss2 = loss_fn(out2, labels2)
+                # loss3 = loss_fn(out3, labels3)
 
             else:
                 # mixup
                 lam = np.random.beta(args.mixup_alpha, args.mixup_alpha)
-                rand_index = torch.randperm(inputs.size()[0]).to(device)
+                rand_index = torch.randperm(inputs.size()[0])
 
                 inputs = lam * inputs + (1 - lam) * inputs[rand_index, :]
 
-                labels1_a = labels1
-                labels2_a = labels2
-                labels3_a = labels3
+            labels1_a = labels1
+            labels2_a = labels2
+            labels3_a = labels3
 
-                labels1_b = labels1[rand_index]
-                labels2_b = labels2[rand_index]
-                labels3_b = labels3[rand_index]
+            labels1_b = labels1[rand_index]
+            labels2_b = labels2[rand_index]
+            labels3_b = labels3[rand_index]
 
-                inputs = inputs.to(device)
+            inputs = inputs.to(device)
 
-                out = model(inputs)
+            out = model(inputs)
 
-                out1 = out[:, :11]
-                out2 = out[:, 11:168+11]
-                out3 = out[:, 11+168:11+168+7]
-                # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
-                loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
-                loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
-                loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
+            out1 = out[:, :11]
+            out2 = out[:, 11:168+11]
+            out3 = out[:, 11+168:11+168+7]
+            # loss = (loss_fn(out1, labels1_a)+loss_fn(out2, labels2_a)+loss_fn(out3, labels3_a)) * lam + (loss_fn(out1, labels1_b)+loss_fn(out2, labels2_b)+loss_fn(out3, labels3_b)) * (1.0 - lam)
+            loss1 = loss_fn(out1, labels1_a) * lam + loss_fn(out1, labels1_b) * (1.0 - lam)
+            loss2 = loss_fn(out2, labels2_a) * lam + loss_fn(out2, labels2_b) * (1.0 - lam)
+            loss3 = loss_fn(out3, labels3_a) * lam + loss_fn(out3, labels3_b) * (1.0 - lam)
 
 
             loss = loss1 + loss2 + loss3
@@ -386,7 +397,9 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         logger["val_recall_label2"].append(val_recall2)
         logger["val_recall_label3"].append(val_recall3)
 
-        scheduler.step(logger["val_loss"][-1])
+        # scheduler.step(logger["val_loss"][-1])
+        scheduler.step()
+        print("learning rate:", scheduler.get_lr())
 
         for k, v in logger.items():
             print(k, v[-1])

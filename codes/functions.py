@@ -127,21 +127,20 @@ def cutmix_aug(img_batch, sl=0.2, sh=0.5, r1=0.3, r2=3.3):
 
     rand_index = torch.randperm(img_batch.size()[0])
 
-
     batchsize, channels, height, width = img_batch.size()
 
     S = height * width
-
 
     # sample box center from uniform dist.
     x = np.random.randint(low=0, high=width)
     y = np.random.randint(low=0, high=height)
 
-    # sampling bbox area and bbox aspect ratio from uniform dist.
+    # sampling bbox area from uniform dist.
     Se = np.random.uniform(sl, sh) * S
-    # re = np.random.uniform(r1, r2)
 
-    re = (np.random.beta(0.5, 0.5) * (r2 - r1)) + r1
+    # sampling aspect ratio
+    re = np.random.uniform(r1, r2)
+    # re = (np.random.beta(0.5, 0.5) * (r2 - r1)) + r1
 
 
     # box height and width
