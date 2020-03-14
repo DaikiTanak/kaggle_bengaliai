@@ -9,7 +9,7 @@ import copy
 import slackweb
 import cv2
 import pretrainedmodels
-
+import PIL
 import torch
 import torchvision
 # from torchvision import transforms, utils
@@ -96,16 +96,32 @@ class PretrainedWrapper(torch.nn.Module):
     def forward(self, x):
         return self.model(x)
 
+if args.resume:
+    fn = "../models/pretrained_resnext50_sgd_plat_cutmix_mixup_6folds_fold1.dat"
 
+    checkpoint = torch.load(fn, map_location=device)
 
-if args.model == "resnext50":
-    base_model = pretrainedmodels.se_resnext50_32x4d(num_classes=1000, pretrained='imagenet')
-    print("model input:", base_model.input_size)
-    model = PretrainedWrapper(wrapped_model=base_model, num_classes=11+168+7).to(device)
-    # model = pretrainedmodels.se_resnext50_32x4d(num_classes=11+168+7, pretrained=False).to(device)
+    if args.model == "resnext50":
+        base_model = pretrainedmodels.se_resnext50_32x4d(num_classes=1000, pretrained='imagenet')
+        model = PretrainedWrapper(wrapped_model=base_model, num_classes=11+168+7)
+        # model = pretrainedmodels.se_resnext50_32x4d(num_classes=11+168+7, pretrained=False).to(device)
+        model.load_state_dict(checkpoint["model"])
 
+        model = model.to(device)
+
+    else:
+        raise ValueError()
 else:
-    raise ValueError()
+
+
+    if args.model == "resnext50":
+        base_model = pretrainedmodels.se_resnext50_32x4d(num_classes=1000, pretrained='imagenet')
+        print("model input:", base_model.input_size)
+        model = PretrainedWrapper(wrapped_model=base_model, num_classes=11+168+7).to(device)
+        # model = pretrainedmodels.se_resnext50_32x4d(num_classes=11+168+7, pretrained=False).to(device)
+
+    else:
+        raise ValueError()
 
 
 # train_all = load_train_df()
@@ -135,8 +151,10 @@ imgs = np.asarray(resized)
 # input()
 
 transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
-                                          torchvision.transforms.ToTensor(),
-                                             torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
+                                            torchvision.transforms.RandomRotation(degrees=args.affine_rotate, resample=PIL.Image.BILINEAR, expand=False, center=None, fill=255),
+                                            torchvision.transforms.ToTensor(),
+                                            # torchvision.transforms.RandomAffine(degrees=args.affine_rotate, translate=(args.affine_translate, args.affine_translate), scale=(0.95, 1.05), shear=None, resample=False, fillcolor=0),
+                                            torchvision.transforms.Normalize([mean,mean,mean],[std,std,std])])
                                              # torchvision.transforms.Normalize(mean,std,)])
 
 val_transforms = torchvision.transforms.Compose([torchvision.transforms.ToPILImage(mode=None),
@@ -166,7 +184,7 @@ print("#imgs: ", imgs.shape)
 #                                                                                                                                     random_state=seed,
 #                                                                                                                                     shuffle=True)
 
-nfold = 5
+nfold = 6
 mskf = MultilabelStratifiedKFold(n_splits=nfold, random_state=args.seed)
 img_idx_list = [i for i in range(len(imgs))]
 labels = np.hstack((np.reshape(vowels, (len(vowels),1)),
@@ -193,9 +211,16 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     train_component = component_labels[train_idx]
     val_component = component_labels[val_idx]
 
-    model_fn = "../models/{}_fold{}.dat".format(args.name, fold_idx+1)
-    result_hist_fn = "../result/{}_train_history_fold{}.png".format(args.name, fold_idx+1)
-    logger_fn = "../result/{}_train_log_fold{}.dat".format(args.name, fold_idx+1)
+    if args.resume:
+        name = "pretrained_resnext50_sgd_plat_cutmix_mixup_6folds"
+        model_fn = "../models/{}_fold{}_restart.dat".format(name, fold_idx+1)
+        result_hist_fn = "../result/{}_train_history_fold{}_restart.png".format(name, fold_idx+1)
+        logger_fn = "../result/{}_train_log_fold{}_restart.dat".format(name, fold_idx+1)
+    else:
+
+        model_fn = "../models/{}_fold{}.dat".format(args.name, fold_idx+1)
+        result_hist_fn = "../result/{}_train_history_fold{}.png".format(args.name, fold_idx+1)
+        logger_fn = "../result/{}_train_log_fold{}.dat".format(args.name, fold_idx+1)
 
     # ----------------------------------------------------------------------------------------------------
     # set up dataset, models, optimizer
@@ -226,9 +251,13 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     elif args.optim == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, dampening=0, weight_decay=0.0005)
     #scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-5, eps=1e-08)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=1e-6)
-    #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.05)
+    if args.scheduler == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=1e-6)
+    elif args.scheduler == "plat":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-6, eps=1e-08)
+    else:
+        raise ValueError
+
     loss_fn = torch.nn.CrossEntropyLoss()
     # ----------------------------------------------------------------------------------------------------
 
@@ -397,9 +426,12 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
         logger["val_recall_label2"].append(val_recall2)
         logger["val_recall_label3"].append(val_recall3)
 
-        # scheduler.step(logger["val_loss"][-1])
-        scheduler.step()
-        print("learning rate:", scheduler.get_lr())
+        if args.scheduler == "cosine":
+            scheduler.step()
+            print("learning rate:", scheduler.get_lr())
+        elif args.scheduler == "plat":
+            scheduler.step(logger["val_loss"][-1])
+
 
         for k, v in logger.items():
             print(k, v[-1])
@@ -432,11 +464,11 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
             torch.save(checkpoint, model_fn)
 
         slack.notify(text="{} fold:{} Epoch:{} train loss:{} val loss:{} train recall:{} val recall{} best{}".format(args.name, fold_idx+1, epoch_idx,
-                                                                                                            round(logger["train_loss"][-1], 3),
-                                                                                                            round(logger["val_loss"][-1], 3),
-                                                                                                            round(logger["train_recall"][-1], 3),
-                                                                                                            round(logger["val_recall"][-1], 3),
-                                                                                                            round(val_best_recall, 3)))
+                                                                                                            round(logger["train_loss"][-1], 4),
+                                                                                                            round(logger["val_loss"][-1], 4),
+                                                                                                            round(logger["train_recall"][-1], 4),
+                                                                                                            round(logger["val_recall"][-1], 4),
+                                                                                                            round(val_best_recall, 4)))
 
 
 
