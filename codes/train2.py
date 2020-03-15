@@ -105,7 +105,7 @@ if args.resume:
         base_model = pretrainedmodels.se_resnext50_32x4d(num_classes=1000, pretrained='imagenet')
         model = PretrainedWrapper(wrapped_model=base_model, num_classes=11+168+7)
         # model = pretrainedmodels.se_resnext50_32x4d(num_classes=11+168+7, pretrained=False).to(device)
-        model.load_state_dict(checkpoint["model"])
+        model.load_state_dict(checkpoint["model_recall"])
 
         model = model.to(device)
 
@@ -254,7 +254,7 @@ for fold_idx, (train_idx, val_idx) in enumerate(mskf.split(img_idx_list, labels)
     if args.scheduler == "cosine":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=1e-6)
     elif args.scheduler == "plat":
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-6, eps=1e-08)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_drop, patience=args.patience, verbose=False, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=1e-8, eps=1e-08)
     else:
         raise ValueError
 
